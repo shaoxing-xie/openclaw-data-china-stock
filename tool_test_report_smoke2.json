@@ -1,0 +1,120 @@
+{
+  "generated_at": "2026-03-30T13:33:17.645925+00:00",
+  "manifest": "/home/xie/openclaw-data-china-stock/config/tools_manifest.json",
+  "tool_runner": "/home/xie/openclaw-data-china-stock/tool_runner.py",
+  "disable_network": false,
+  "timeout_seconds": 30,
+  "limit": 5,
+  "total_tools": 5,
+  "ok_tools": 2,
+  "fail_tools": 3,
+  "results": [
+    {
+      "tool_id": "tool_fetch_index_realtime",
+      "ok": true,
+      "rc": 0,
+      "duration_ms": 11615,
+      "args": {
+        "index_code": "000001"
+      },
+      "error_message": "Successfully fetched index realtime data",
+      "result": {
+        "success": true,
+        "message": "Successfully fetched index realtime data",
+        "data": {
+          "code": "000001",
+          "name": "上证指数",
+          "current_price": 0,
+          "change": 0,
+          "change_percent": 0,
+          "message": "数据暂时不可用，请稍后重试"
+        },
+        "source": "fallback",
+        "count": 1,
+        "is_fallback": true
+      }
+    },
+    {
+      "tool_id": "tool_fetch_index_historical",
+      "ok": true,
+      "rc": 0,
+      "duration_ms": 11193,
+      "args": {
+        "period": "daily",
+        "index_code": "000001"
+      },
+      "error_message": "Successfully fetched 1 index(es) historical data",
+      "result": {
+        "success": true,
+        "message": "Successfully fetched 1 index(es) historical data",
+        "data": {
+          "index_code": "000001",
+          "index_name": "上证指数",
+          "period": "daily",
+          "count": 0,
+          "klines": [],
+          "message": "指数历史数据暂时不可用，请稍后重试"
+        },
+        "source": "unknown",
+        "count": 1
+      }
+    },
+    {
+      "tool_id": "tool_fetch_index_minute",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 10239,
+      "args": {
+        "period": "5",
+        "lookback_days": 5,
+        "index_code": "000001"
+      },
+      "error_message": "未从外部源获取到分钟数据（returned_count=0）",
+      "result": {
+        "success": false,
+        "message": "未从外部源获取到分钟数据（returned_count=0）",
+        "data": {
+          "index_code": "000001",
+          "name": "上证指数",
+          "period": "5",
+          "count": 0,
+          "klines": [],
+          "message": "指数分钟数据暂时不可用，请稍后重试"
+        },
+        "source": "unknown",
+        "count": 1
+      }
+    },
+    {
+      "tool_id": "tool_fetch_index_opening",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 22327,
+      "args": {},
+      "error_message": "未获取到指数开盘数据（akshare 与 mootdx 均不可用或无数据）",
+      "result": {
+        "success": false,
+        "message": "未获取到指数开盘数据（akshare 与 mootdx 均不可用或无数据）",
+        "data": null
+      }
+    },
+    {
+      "tool_id": "tool_fetch_index_data",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 228,
+      "args": {
+        "index_code": "000001",
+        "lookback_days": 5,
+        "mode": "production",
+        "data_type": ""
+      },
+      "error_message": "不支持的 data_type: ，应为 realtime | historical | minute | opening | global_spot",
+      "result": {
+        "success": false,
+        "message": "不支持的 data_type: ，应为 realtime | historical | minute | opening | global_spot",
+        "data": null
+      }
+    }
+  ]
+}

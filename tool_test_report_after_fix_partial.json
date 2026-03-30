@@ -1,0 +1,822 @@
+{
+  "generated_at": "2026-03-30T14:07:37.291861+00:00",
+  "manifest": "/home/xie/openclaw-data-china-stock/config/tools_manifest.json",
+  "tool_runner": "/home/xie/openclaw-data-china-stock/tool_runner.py",
+  "disable_network": false,
+  "timeout_seconds": 90,
+  "limit": 32,
+  "total_tools": 32,
+  "ok_tools": 14,
+  "fail_tools": 18,
+  "results": [
+    {
+      "tool_id": "tool_fetch_index_realtime",
+      "ok": true,
+      "rc": 0,
+      "duration_ms": 12536,
+      "args": {
+        "index_code": "000001"
+      },
+      "error_message": "Successfully fetched index realtime data",
+      "result": {
+        "success": true,
+        "message": "Successfully fetched index realtime data",
+        "data": {
+          "code": "000001",
+          "name": "上证指数",
+          "current_price": 0,
+          "change": 0,
+          "change_percent": 0,
+          "message": "数据暂时不可用，请稍后重试"
+        },
+        "source": "fallback",
+        "count": 1,
+        "is_fallback": true
+      }
+    },
+    {
+      "tool_id": "tool_fetch_index_historical",
+      "ok": true,
+      "rc": 0,
+      "duration_ms": 12357,
+      "args": {
+        "period": "daily",
+        "index_code": "000001"
+      },
+      "error_message": "Successfully fetched 1 index(es) historical data",
+      "result": {
+        "success": true,
+        "message": "Successfully fetched 1 index(es) historical data",
+        "data": {
+          "index_code": "000001",
+          "index_name": "上证指数",
+          "period": "daily",
+          "count": 0,
+          "klines": [],
+          "message": "指数历史数据暂时不可用，请稍后重试"
+        },
+        "source": "unknown",
+        "count": 1
+      }
+    },
+    {
+      "tool_id": "tool_fetch_index_minute",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 10850,
+      "args": {
+        "period": "5",
+        "lookback_days": 5,
+        "index_code": "000001"
+      },
+      "error_message": "未从外部源获取到分钟数据（returned_count=0）",
+      "result": {
+        "success": false,
+        "message": "未从外部源获取到分钟数据（returned_count=0）",
+        "data": {
+          "index_code": "000001",
+          "name": "上证指数",
+          "period": "5",
+          "count": 0,
+          "klines": [],
+          "message": "指数分钟数据暂时不可用，请稍后重试"
+        },
+        "source": "unknown",
+        "count": 1
+      }
+    },
+    {
+      "tool_id": "tool_fetch_index_opening",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 24911,
+      "args": {},
+      "error_message": "未获取到指数开盘数据（akshare 与 mootdx 均不可用或无数据）",
+      "result": {
+        "success": false,
+        "message": "未获取到指数开盘数据（akshare 与 mootdx 均不可用或无数据）",
+        "data": null
+      }
+    },
+    {
+      "tool_id": "tool_fetch_index_data",
+      "ok": true,
+      "rc": 0,
+      "duration_ms": 12273,
+      "args": {
+        "index_code": "000001",
+        "lookback_days": 5,
+        "mode": "production",
+        "data_type": "realtime"
+      },
+      "error_message": "Successfully fetched index realtime data",
+      "result": {
+        "success": true,
+        "message": "Successfully fetched index realtime data",
+        "data": {
+          "code": "000001",
+          "name": "上证指数",
+          "current_price": 0,
+          "change": 0,
+          "change_percent": 0,
+          "message": "数据暂时不可用，请稍后重试"
+        },
+        "source": "fallback",
+        "count": 1,
+        "is_fallback": true
+      }
+    },
+    {
+      "tool_id": "tool_fetch_etf_data",
+      "ok": true,
+      "rc": 0,
+      "duration_ms": 4453,
+      "args": {
+        "etf_code": "510300",
+        "lookback_days": 5,
+        "data_type": "realtime"
+      },
+      "error_message": "Successfully fetched ETF realtime data",
+      "result": {
+        "success": true,
+        "message": "Successfully fetched ETF realtime data",
+        "data": {
+          "code": "510300",
+          "name": "沪深300ETF",
+          "current_price": 0,
+          "change": 0,
+          "change_percent": 0,
+          "message": "数据暂时不可用，请稍后重试"
+        },
+        "source": "akshare",
+        "count": 1
+      }
+    },
+    {
+      "tool_id": "tool_fetch_option_data",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 1774,
+      "args": {
+        "period": "15",
+        "data_type": "realtime",
+        "contract_code": "10011210"
+      },
+      "error_message": "调用 akshare API 失败: HTTPSConnectionPool(host='hq.sinajs.cn', port=443): Max retries exceeded with url: /list=CON_OP_10011210 (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden')))",
+      "result": {
+        "success": false,
+        "message": "调用 akshare API 失败: HTTPSConnectionPool(host='hq.sinajs.cn', port=443): Max retries exceeded with url: /list=CON_OP_10011210 (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden')))",
+        "data": null
+      }
+    },
+    {
+      "tool_id": "tool_fetch_etf_realtime",
+      "ok": true,
+      "rc": 0,
+      "duration_ms": 4955,
+      "args": {
+        "etf_code": "510300"
+      },
+      "error_message": "Successfully fetched ETF realtime data",
+      "result": {
+        "success": true,
+        "message": "Successfully fetched ETF realtime data",
+        "data": {
+          "code": "510300",
+          "name": "沪深300ETF",
+          "current_price": 0,
+          "change": 0,
+          "change_percent": 0,
+          "message": "数据暂时不可用，请稍后重试"
+        },
+        "source": "akshare",
+        "count": 1
+      }
+    },
+    {
+      "tool_id": "tool_fetch_etf_historical",
+      "ok": true,
+      "rc": 0,
+      "duration_ms": 3569,
+      "args": {
+        "period": "daily",
+        "etf_code": "510300"
+      },
+      "error_message": "Successfully fetched 0 records",
+      "result": {
+        "success": true,
+        "message": "Successfully fetched 0 records",
+        "data": {
+          "code": "510300",
+          "name": "沪深300ETF",
+          "period": "daily",
+          "start_date": "2026-02-28",
+          "end_date": "2026-03-30",
+          "count": 0,
+          "klines": [],
+          "message": "ETF历史数据暂时不可用，请稍后重试"
+        },
+        "source": "akshare",
+        "count": 1
+      }
+    },
+    {
+      "tool_id": "tool_fetch_etf_minute",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 2090,
+      "args": {
+        "period": "5",
+        "lookback_days": 5,
+        "etf_code": "510300"
+      },
+      "error_message": "未从外部源获取到分钟数据（returned_count=0）",
+      "result": {
+        "success": false,
+        "message": "未从外部源获取到分钟数据（returned_count=0）",
+        "data": {
+          "etf_code": "510300",
+          "period": "5",
+          "count": 0,
+          "klines": [],
+          "message": "ETF分钟数据暂时不可用，请稍后重试"
+        },
+        "source": "unknown",
+        "count": 1
+      }
+    },
+    {
+      "tool_id": "tool_fetch_etf_iopv_snapshot",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 6484,
+      "args": {
+        "etf_code": "510300"
+      },
+      "error_message": "fund_etf_spot_em failed: HTTPSConnectionPool(host='88.push2.eastmoney.com', port=443): Max retries exceeded with url: /api/qt/clist/get?pn=1&pz=100&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&wbp2u=%7C0%7C0%7C0%7Cweb&fid=f12&fs=b%3AMK0021%2Cb%3AMK0022%2Cb%3AMK0023%2Cb%3AMK0024%2Cb%3AMK0827&fields=f12%2Cf14%2Cf2%2Cf441%2Cf402 (Caused by NameResolutionError(\"<urllib3.connection.HTTPSConnection object at 0x79a6bb55bcb0>: Failed to resolve '88.push2.eastmoney.com' ([Errno -3] Temporary failure in name resolution)\"))",
+      "result": {
+        "success": false,
+        "message": "fund_etf_spot_em failed: HTTPSConnectionPool(host='88.push2.eastmoney.com', port=443): Max retries exceeded with url: /api/qt/clist/get?pn=1&pz=100&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&wbp2u=%7C0%7C0%7C0%7Cweb&fid=f12&fs=b%3AMK0021%2Cb%3AMK0022%2Cb%3AMK0023%2Cb%3AMK0024%2Cb%3AMK0827&fields=f12%2Cf14%2Cf2%2Cf441%2Cf402 (Caused by NameResolutionError(\"<urllib3.connection.HTTPSConnection object at 0x79a6bb55bcb0>: Failed to resolve '88.push2.eastmoney.com' ([Errno -3] Temporary failure in name resolution)\"))",
+        "data": null,
+        "source": "fund_etf_spot_em"
+      }
+    },
+    {
+      "tool_id": "tool_fetch_option_realtime",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 1533,
+      "args": {
+        "contract_code": "10011210"
+      },
+      "error_message": "调用 akshare API 失败: HTTPSConnectionPool(host='hq.sinajs.cn', port=443): Max retries exceeded with url: /list=CON_OP_10011210 (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden')))",
+      "result": {
+        "success": false,
+        "message": "调用 akshare API 失败: HTTPSConnectionPool(host='hq.sinajs.cn', port=443): Max retries exceeded with url: /list=CON_OP_10011210 (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden')))",
+        "data": null
+      }
+    },
+    {
+      "tool_id": "tool_fetch_option_greeks",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 1715,
+      "args": {
+        "contract_code": "10011210"
+      },
+      "error_message": "Error: HTTPSConnectionPool(host='hq.sinajs.cn', port=443): Max retries exceeded with url: /list=CON_SO_10011210 (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden')))",
+      "result": {
+        "success": false,
+        "message": "Error: HTTPSConnectionPool(host='hq.sinajs.cn', port=443): Max retries exceeded with url: /list=CON_SO_10011210 (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden')))",
+        "data": null
+      }
+    },
+    {
+      "tool_id": "tool_fetch_option_minute",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 1806,
+      "args": {
+        "period": "15",
+        "contract_code": "10011210"
+      },
+      "error_message": "Error: HTTPSConnectionPool(host='stock.finance.sina.com.cn', port=443): Max retries exceeded with url: /futures/api/openapi.php/StockOptionDaylineService.getOptionMinline?symbol=CON_OP_10011210 (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden')))",
+      "result": {
+        "success": false,
+        "message": "Error: HTTPSConnectionPool(host='stock.finance.sina.com.cn', port=443): Max retries exceeded with url: /futures/api/openapi.php/StockOptionDaylineService.getOptionMinline?symbol=CON_OP_10011210 (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden')))",
+        "data": null
+      }
+    },
+    {
+      "tool_id": "tool_fetch_a50_data",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 4018,
+      "args": {
+        "data_type": "realtime"
+      },
+      "error_message": "A50期指数据暂时不可用，请稍后重试",
+      "result": {
+        "success": false,
+        "symbol": "A50期指",
+        "source": "fallback",
+        "spot_data": null,
+        "hist_data": null,
+        "message": "A50期指数据暂时不可用，请稍后重试",
+        "timestamp": "2026-03-30 22:07:03"
+      }
+    },
+    {
+      "tool_id": "tool_fetch_sector_data",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 6715,
+      "args": {
+        "sector_type": "industry",
+        "period": "today"
+      },
+      "error_message": "东方财富与 AkShare 板块接口均无有效数据",
+      "result": {
+        "status": "error",
+        "error": "东方财富与 AkShare 板块接口均无有效数据",
+        "sector_type": "industry",
+        "date": "2026-03-30"
+      }
+    },
+    {
+      "tool_id": "tool_get_option_contracts",
+      "ok": true,
+      "rc": 0,
+      "duration_ms": 2530,
+      "args": {},
+      "error_message": "Successfully fetched 0 contracts",
+      "result": {
+        "success": true,
+        "message": "Successfully fetched 0 contracts",
+        "data": {
+          "underlying": "510300",
+          "underlying_name": "沪深300ETF",
+          "option_type": "all",
+          "contracts": [],
+          "count": 0,
+          "expiry_months_queried": [
+            "202603",
+            "202605"
+          ]
+        }
+      }
+    },
+    {
+      "tool_id": "tool_check_trading_status",
+      "ok": true,
+      "rc": 0,
+      "duration_ms": 451,
+      "args": {},
+      "error_message": null,
+      "result": {
+        "success": true,
+        "data": {
+          "status": "after_close",
+          "market_status_cn": "收盘后",
+          "is_trading_time": false,
+          "is_trading_day": true,
+          "a_share_continuous_bidding_active": false,
+          "allows_intraday_continuous_wording": false,
+          "quote_narration_rule_cn": "收盘后：连续竞价已结束。禁止将收盘数据叙述为「当前盘中」；可复盘或预测次日。",
+          "current_time": "2026-03-30 22:07:13",
+          "next_trading_time": "2026-03-31 09:30:00",
+          "remaining_minutes": 682,
+          "timezone": "Asia/Shanghai"
+        }
+      }
+    },
+    {
+      "tool_id": "tool_get_a_share_market_regime",
+      "ok": true,
+      "rc": 0,
+      "duration_ms": 413,
+      "args": {
+        "timezone": "Asia/Shanghai"
+      },
+      "error_message": null,
+      "result": {
+        "success": true,
+        "data": {
+          "phase": "after_close",
+          "is_trading_day": true,
+          "can_trade": false,
+          "recommended_mode": "after_close",
+          "current_time": "2026-03-30 22:07:14",
+          "timezone": "Asia/Shanghai",
+          "next_transition": {
+            "next_phase": "preopen",
+            "next_time": "2026-03-31 09:15:00"
+          },
+          "remaining_minutes": 667
+        }
+      }
+    },
+    {
+      "tool_id": "tool_filter_a_share_tradability",
+      "ok": true,
+      "rc": 0,
+      "duration_ms": 2149,
+      "args": {
+        "assume_tradable_if_unknown": false,
+        "stock_codes": "600000"
+      },
+      "error_message": "tradability filter ok",
+      "result": {
+        "success": true,
+        "message": "tradability filter ok",
+        "data": {
+          "results": [
+            {
+              "stock_code": "600000",
+              "tradable": false,
+              "status": "unknown",
+              "reasons": [
+                "realtime_quote_unavailable"
+              ],
+              "raw": null
+            }
+          ],
+          "count": 1
+        }
+      }
+    },
+    {
+      "tool_id": "tool_read_market_data",
+      "ok": true,
+      "rc": 0,
+      "duration_ms": 1204,
+      "args": {
+        "data_type": "etf_daily",
+        "symbol": "510300",
+        "start_date": "20240105",
+        "end_date": "20240105"
+      },
+      "error_message": "ok",
+      "result": {
+        "success": true,
+        "message": "ok",
+        "data": [
+          {
+            "日期": "2024-01-05 00:00:00",
+            "开盘": 3.404,
+            "最高": 3.439,
+            "最低": 3.377,
+            "收盘": 3.396,
+            "成交量": 1699669666,
+            "成交额": 5796964474,
+            "涨跌幅": -0.49809551714034006
+          }
+        ],
+        "missing_dates": [],
+        "cache_hit": true
+      }
+    },
+    {
+      "tool_id": "tool_read_index_daily",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 2246,
+      "args": {
+        "symbol": "000300"
+      },
+      "error_message": "cache_miss",
+      "result": {
+        "success": false,
+        "message": "cache_miss",
+        "data": null,
+        "missing_dates": [
+          "20260228",
+          "20260301",
+          "20260302",
+          "20260303",
+          "20260304",
+          "20260305",
+          "20260306",
+          "20260307",
+          "20260308",
+          "20260309",
+          "20260310",
+          "20260311",
+          "20260312",
+          "20260313",
+          "20260314",
+          "20260315",
+          "20260316",
+          "20260317",
+          "20260318",
+          "20260319",
+          "20260320",
+          "20260321",
+          "20260322",
+          "20260323",
+          "20260324",
+          "20260325",
+          "20260326",
+          "20260327",
+          "20260328",
+          "20260329",
+          "20260330"
+        ]
+      }
+    },
+    {
+      "tool_id": "tool_read_index_minute",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 1170,
+      "args": {
+        "symbol": "000300",
+        "period": "5",
+        "date": "20240105"
+      },
+      "error_message": "缺少 date 或 start_date/end_date",
+      "result": {
+        "success": false,
+        "message": "缺少 date 或 start_date/end_date",
+        "data": null,
+        "missing_dates": []
+      }
+    },
+    {
+      "tool_id": "tool_read_etf_daily",
+      "ok": true,
+      "rc": 0,
+      "duration_ms": 1156,
+      "args": {
+        "symbol": "510300",
+        "start_date": "20240105",
+        "end_date": "20240105"
+      },
+      "error_message": "ok",
+      "result": {
+        "success": true,
+        "message": "ok",
+        "data": [
+          {
+            "日期": "2024-01-05 00:00:00",
+            "开盘": 3.404,
+            "最高": 3.439,
+            "最低": 3.377,
+            "收盘": 3.396,
+            "成交量": 1699669666,
+            "成交额": 5796964474,
+            "涨跌幅": -0.49809551714034006
+          }
+        ],
+        "missing_dates": [],
+        "cache_hit": true
+      }
+    },
+    {
+      "tool_id": "tool_read_etf_minute",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 1128,
+      "args": {
+        "symbol": "510300",
+        "period": "5",
+        "date": "20240105"
+      },
+      "error_message": "缺少 date 或 start_date/end_date",
+      "result": {
+        "success": false,
+        "message": "缺少 date 或 start_date/end_date",
+        "data": null,
+        "missing_dates": []
+      }
+    },
+    {
+      "tool_id": "tool_read_option_minute",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 1096,
+      "args": {
+        "contract_code": "10011210",
+        "period": "5",
+        "date": "20240105"
+      },
+      "error_message": "cache_miss",
+      "result": {
+        "success": false,
+        "message": "cache_miss",
+        "data": null,
+        "missing_dates": [
+          "20240105"
+        ]
+      }
+    },
+    {
+      "tool_id": "tool_read_option_greeks",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 1090,
+      "args": {
+        "contract_code": "10011210",
+        "date": "20240105"
+      },
+      "error_message": "cache_miss",
+      "result": {
+        "success": false,
+        "message": "cache_miss",
+        "data": null,
+        "missing_dates": [
+          "20240105"
+        ]
+      }
+    },
+    {
+      "tool_id": "tool_fetch_stock_financials",
+      "ok": true,
+      "rc": 0,
+      "duration_ms": 1559,
+      "args": {
+        "lookback_report_count": 1,
+        "symbols": "600000"
+      },
+      "error_message": null,
+      "result": {
+        "status": "success",
+        "financials": [
+          {
+            "symbol": "600000",
+            "pe_ttm": null,
+            "pb": null,
+            "roe": null,
+            "dividend_yield": null,
+            "report_date": null,
+            "success": false,
+            "error": "HTTPSConnectionPool(host='datacenter.eastmoney.com', port=443): Max retries exceeded with url: /securities/api/data/get?type=RPT_F10_FINANCE_MAINFINADATA&sty=APP_F10_MAINFINADATA&quoteColumns=&filter=%28SECUCODE%3D%22600000.SH%22%29&p=1&ps=200&sr=-1&st=REPORT_DATE&source=HSF10&client=PC (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden')))"
+          }
+        ],
+        "lookback_report_count": 1
+      }
+    },
+    {
+      "tool_id": "tool_fetch_stock_historical",
+      "ok": true,
+      "rc": 0,
+      "duration_ms": 3827,
+      "args": {
+        "stock_code": "600000",
+        "period": "daily"
+      },
+      "error_message": "Successfully fetched 0 records",
+      "result": {
+        "success": true,
+        "message": "Successfully fetched 0 records",
+        "data": {
+          "stock_code": "600000",
+          "period": "daily",
+          "count": 0,
+          "klines": [],
+          "message": "股票历史数据暂时不可用，请稍后重试"
+        },
+        "source": "akshare",
+        "count": 1
+      }
+    },
+    {
+      "tool_id": "tool_fetch_stock_minute",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 1748,
+      "args": {
+        "stock_code": "600000",
+        "period": "5",
+        "lookback_days": 5
+      },
+      "error_message": "未从外部源获取到分钟数据（returned_count=0）",
+      "result": {
+        "success": false,
+        "message": "未从外部源获取到分钟数据（returned_count=0）",
+        "data": {
+          "stock_code": "600000",
+          "period": "5",
+          "count": 0,
+          "klines": [],
+          "message": "股票分钟数据暂时不可用，请稍后重试"
+        },
+        "source": "unknown",
+        "count": 1
+      }
+    },
+    {
+      "tool_id": "tool_fetch_stock_realtime",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 1820,
+      "args": {
+        "stock_code": "600000",
+        "mode": "production"
+      },
+      "error_message": "无法获取股票实时行情（mootdx、东财五档、腾讯 qt.gtimg.cn、AkShare stock_zh_a_spot 均不可用或返回空数据）",
+      "result": {
+        "success": false,
+        "message": "无法获取股票实时行情（mootdx、东财五档、腾讯 qt.gtimg.cn、AkShare stock_zh_a_spot 均不可用或返回空数据）",
+        "data": null,
+        "source": "none",
+        "count": 0
+      }
+    },
+    {
+      "tool_id": "tool_stock_data_fetcher",
+      "ok": false,
+      "rc": 0,
+      "duration_ms": 2802,
+      "args": {
+        "action": "fetch",
+        "data_types": [
+          "realtime",
+          "daily",
+          "minute",
+          "financials",
+          "technicals"
+        ],
+        "minute_period": "5,15,30",
+        "lookback_days": 20,
+        "indicators": [
+          "ma",
+          "macd",
+          "rsi",
+          "bollinger"
+        ],
+        "include_analysis": false,
+        "mode": "production",
+        "symbols": "600000"
+      },
+      "error_message": "Fetched but empty data",
+      "result": {
+        "success": false,
+        "message": "Fetched but empty data",
+        "data": {
+          "symbol": "600000",
+          "realtime": null,
+          "realtime_fetch": {
+            "success": false,
+            "source": "none"
+          },
+          "daily_hist": [],
+          "daily_fetch": {
+            "success": true,
+            "source": "akshare"
+          },
+          "minute_fetch": {
+            "5": {
+              "success": false,
+              "returned_count": null,
+              "source": "unknown"
+            },
+            "15": {
+              "success": false,
+              "returned_count": null,
+              "source": "unknown"
+            },
+            "30": {
+              "success": false,
+              "returned_count": null,
+              "source": "unknown"
+            }
+          },
+          "financials": {
+            "symbol": "600000",
+            "pe_ttm": null,
+            "pb": null,
+            "roe": null,
+            "dividend_yield": null,
+            "report_date": null,
+            "success": false,
+            "error": "HTTPSConnectionPool(host='datacenter.eastmoney.com', port=443): Max retries exceeded with url: /securities/api/data/get?type=RPT_F10_FINANCE_MAINFINADATA&sty=APP_F10_MAINFINADATA&quoteColumns=&filter=%28SECUCODE%3D%22600000.SH%22%29&p=1&ps=200&sr=-1&st=REPORT_DATE&source=HSF10&client=PC (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden')))"
+          },
+          "minute_data": {
+            "5": [],
+            "15": [],
+            "30": []
+          },
+          "technicals": {
+            "5min": {
+              "success": false,
+              "message": "calculate technicals failed: No module named 'plugins.analysis'",
+              "data": null
+            },
+            "15min": {
+              "success": false,
+              "message": "calculate technicals failed: No module named 'plugins.analysis'",
+              "data": null
+            },
+            "30min": {
+              "success": false,
+              "message": "calculate technicals failed: No module named 'plugins.analysis'",
+              "data": null
+            }
+          }
+        },
+        "count": 1
+      }
+    }
+  ]
+}
