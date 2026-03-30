@@ -1,0 +1,25 @@
+data/
+logs/
+
+# Local caches / artifacts
+*.parquet
+*.jsonl
+*.db
+*.sqlite3
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Node
+node_modules/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+

@@ -1,0 +1,23 @@
+{
+  "name": "@shaoxing-xie/openclaw-data-china-stock",
+  "version": "0.1.0",
+  "description": "A-share/ETF/Option data collection plugin for OpenClaw (ClawHub)",
+  "type": "module",
+  "main": "index.ts",
+  "files": [
+    "index.ts",
+    "tool_runner.py",
+    "config/",
+    "plugins/",
+    "src/",
+    "README.md",
+    "README_EN.md",
+    "SKILL.md",
+    "package.json"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "openclaw": "*"
+  }
+}
+
