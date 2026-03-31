@@ -1,34 +1,59 @@
 # openclaw-data-china-stock
 
-`openclaw-data-china-stock` is an open-source, free-to-use OpenClaw/ClawHub data collection plugin for retail investors. It provides a unified set of `tool_*` interfaces to fetch A-share index, ETF, stocks, and listed options—covering realtime, historical, and minute-level data, plus option contract lookup. The plugin supports multiple data sources with automatic priority and fallback, and disables disk cache writes by default (`data_cache.enabled=false`) to reduce data pollution risk.
+**A market-data foundation for A-share retail workflows on OpenClaw / ClawHub**
 
-## Installation
+An open-source, free **OpenClaw code plugin** that exposes a unified set of `tool_*` endpoints for Chinese indices, ETFs, stocks, and listed options—with multi-provider priority/fallback and a safe-by-default disk cache policy (`data_cache.enabled=false`: read existing Parquet if present; **no parquet writes** by default).
 
-You can install it directly inside OpenClaw:
+**In one sentence**: spend less time fighting unstable endpoints, inconsistent formats, and cache surprises—and more time on strategy and engineering.
+
+---
+
+### Highlights
+
+- **Unified entry**: Prefer `tool_fetch_market_data` across index / ETF / stock / option assets (`view` such as `realtime`, `historical`, `minute`, `opening`, `greeks`, etc.).
+- **Multi-source resilience**: AkShare, Sina, Eastmoney, optional Tushare, plus circuit breaker / retries as configured—reducing single-point outages in Agent workflows.
+- **Cache you control**: Parquet **writes** are off by default; enable `data_cache.enabled=true` in `config.yaml` only when you want local read/write caching.
+- **Retail-oriented tools**: limit-up lists, dragon-tiger, northbound flow, sector heat, option Greeks, trading-status helpers, and more (as registered in `config/tools_manifest.json`).
+- **Predictable JSON**: Most tools return objects with `success`, `data`, `message`, `source` (and optional cache metadata).
+
+---
+
+### Installation
+
+**From ClawHub / registry (recommended)**
+
+If one command fails, try the other (depends on OpenClaw version and CLI):
+
+```bash
+openclaw plugins install clawhub:@shaoxing-xie/openclaw-data-china-stock
+```
 
 ```bash
 openclaw plugins install @shaoxing-xie/openclaw-data-china-stock
 ```
 
-## Local install (optional)
-If you want to run/debug tools locally (outside OpenClaw), install dependencies first:
+After installing or upgrading, **restart the OpenClaw Gateway** (or equivalent) and confirm the plugin/tools load in the Dashboard or via `openclaw status`.
+
+**From GitHub (local debugging / contributing)**
 
 ```bash
+git clone https://github.com/shaoxing-xie/openclaw-data-china-stock.git
+cd openclaw-data-china-stock
 pip install -r requirements.txt
 ```
 
-## Quick Start (3 minutes)
+How you mount this folder as an extension depends on your OpenClaw setup (e.g., copy/link into `extensions` and allowlist in `openclaw.json`). Run `openclaw plugins install --help` to see whether **path-based** or **linked** installs are supported on your machine.
 
-1. In OpenClaw plugin settings, ensure `scriptPath` points to this repo’s `tool_runner.py` (or keep the default if your setup already mounts it correctly).
-2. In your Agent/Workflow, call `tool_fetch_market_data` as the primary cross-asset unified entry.
-3. For more stable/offline scenarios, use `tool_read_market_data` / `tool_read_index_*` / `tool_read_etf_*` / `tool_read_option_*`.
+---
 
-### Tushare Backup Configuration
-Some fallback routes may use Tushare: please set the environment variable `TUSHARE_TOKEN` (or configure `tushare.token` in `config.yaml`).
+### Three-minute quick start
 
-Example calls:
+1. In plugin settings, ensure `scriptPath` points at the packaged `tool_runner.py` (defaults are usually fine).
+2. In Agents/Workflows, call **`tool_fetch_market_data` first**.
+3. For offline / weak-network flows, pair with `tool_read_market_data` and other `tool_read_*` tools (requires existing cache files).
 
-- Index (daily historical):
+**Index daily historical example**
+
 ```yaml
 tools:
   - name: tool_fetch_market_data
@@ -41,7 +66,8 @@ tools:
       end_date: "20260228"
 ```
 
-- ETF (5-minute):
+**CSI 300 ETF 5-minute bars**
+
 ```yaml
 tools:
   - name: tool_fetch_market_data
@@ -54,7 +80,8 @@ tools:
       end_date: "20260228"
 ```
 
-- Option (Greeks):
+**Option Greeks**
+
 ```yaml
 tools:
   - name: tool_fetch_market_data
@@ -64,6 +91,20 @@ tools:
       contract_code: "10010910"
 ```
 
+**More examples**: `tool_fetch_limit_up_stocks`, `tool_fetch_northbound_flow`, `tool_dragon_tiger_list`—see the full list below.
+
+### Tushare fallback
+
+Some routes may use Tushare as an optional fallback: set `TUSHARE_TOKEN` or `tushare.token` in `config.yaml`.
+
+---
+
+### Default cache semantics
+
+With `data_cache.enabled=false` (default), the plugin may **read** existing on-disk Parquet caches but **skips writing** new/updated Parquet files (reducing accidental data pollution). Details below under **Cache policy (important)**.
+
+---
+
 ## What you get
 
 - Index / ETF / **Stock** / Option market data (realtime, historical, minute, opening, Greeks).
@@ -71,38 +112,46 @@ tools:
 - Optional capabilities: pre-market/policy/news, sector rotation, limit-up pool, northbound flow, etc.
 - Optional local Parquet cache reads.
 
-## Why now
+---
 
-Many retail users don’t lack information—they lack a stable, unified data “bottom layer” with consistent parameters, consistent return shapes, and predictable availability.
+## Why this exists / who it is for
 
-This plugin focuses on solving common pain points:
+Many retail workflows don’t lack random data—they lack a **stable, reasonably uniform** layer: inconsistent provider schemas, flaky single endpoints, and hard-to-audit caches. This plugin standardizes parameters and return shapes and adds provider priority + fallback so “fetch market data” is a maintainable set of `tool_*` calls.
 
-- Multiple data sources with consistent interfaces
-- Better stability via provider priority + automatic fallback
-- Controlled caching: default to **read-only** disk cache mode
-- Unified entry point to reduce “tool switching” overhead
+- Retail investors focused on A-shares / ETFs / listed options  
+- Users who want repeatable OpenClaw/Agent workflows without bespoke scrapers per provider  
+- Developers who want consistent tool contracts without re-solving China market plumbing every time  
 
-## Target audience
+---
 
-- Retail investors focusing on A-shares / ETFs / listed options
-- Users who want a workflow-friendly data foundation for OpenClaw/Agent
-- Developers who want consistent tool contracts without dealing with many different data providers
+## Disclaimer
 
-## Core capabilities (for stable use)
+This plugin is for **data collection and technical research only**. It is not investment advice and does not guarantee any outcome. You are responsible for your use and any risks.
 
-- As complete as possible by default across index/ETF/stock/options
-- Multi-source provider priority and fallback to reduce single-provider failures
-- Unified cross-asset entry: `tool_fetch_market_data`
-- Compatibility entries kept for convenience: `tool_fetch_index_data`, `tool_fetch_etf_data`, `tool_fetch_option_data`
+---
 
 ## Recommended usage
 
-1. Configure the tool runner path in OpenClaw plugin settings to:
-   - `tool_runner.py` in this repository
-2. In your Agent/Workflow, call:
-   - `tool_fetch_market_data` as the primary cross-asset unified entry
-3. For cached/offline scenarios (when enabled), use:
-   - `tool_read_market_data` or `tool_read_index_*` / `tool_read_etf_*` / `tool_read_option_*`
+1. Confirm `tool_runner.py` resolves correctly in plugin settings.  
+2. Prefer `tool_fetch_market_data` in Agents/Workflows.  
+3. For cache-backed reads, use `tool_read_market_data` / `tool_read_*`; enable `data_cache.enabled=true` only when you explicitly want local Parquet writes and understand paths/disk usage.  
+
+---
+
+## Background
+
+`openclaw-data-china-stock` targets A-share market data collection—indices, ETFs, stocks, and listed options—via unified `tool_*` endpoints for OpenClaw. Disk cache **writes** are off by default (`data_cache.enabled` in `config.yaml`), suited to “online fetch first + read cache if present”.
+
+---
+
+## Pain points → approach
+
+- **Broad coverage**: realtime/historical/minute data and contract lookup across major asset types.  
+- **More stable fetches**: provider priority + automatic fallback.  
+- **Controlled caching**: no disk writes by default; opt-in when needed.  
+- **One primary entry**: `tool_fetch_market_data`, plus compatibility entries `tool_fetch_index_data`, `tool_fetch_etf_data`, `tool_fetch_option_data`.  
+
+---
 
 ## MVP tool categories & interface list (release exposure)
 
@@ -203,6 +252,16 @@ Notes:
 
 - `fetch_tick_with_quality` (Not exposed as tool_*)
 
+---
+
+### MVP tools (try these first)
+
+- `tool_fetch_market_data` — primary cross-asset entry  
+- `tool_get_option_contracts` — list contracts by underlying  
+- Compatibility: `tool_fetch_index_data`, `tool_fetch_etf_data`, `tool_fetch_option_data`  
+
+---
+
 ## Cache policy (important)
 
 ### Disk cache semantics
@@ -248,9 +307,14 @@ The plugin follows the provider priority order in `data_sources.*.priority` (for
   - `max_retries`: maximum retry count
   - `retry_delay`: delay between retries (seconds)
 
-## Disclaimer
+---
 
-This plugin is for data collection and engineering practice only. It does not constitute investment advice or a promise of any results. Users are responsible for any risks and outcomes arising from their usage.
+## More resources
+
+- Source & issues: [GitHub — shaoxing-xie/openclaw-data-china-stock](https://github.com/shaoxing-xie/openclaw-data-china-stock)
+- ClawHub listing: [Plugin page on ClawHub](https://clawhub.ai/plugins/%40shaoxing-xie%2Fopenclaw-data-china-stock)
+
+---
 
 ## License
 
