@@ -1,0 +1,29 @@
+## Exclude Python bytecode / caches
+**/__pycache__/**
+**/*.pyc
+**/*.pyo
+**/*.pyd
+
+## Exclude Python virtualenvs
+.venv/
+venv/
+
+## Exclude local runtime data / caches
+data/
+logs/
+**/*.parquet
+**/*.jsonl
+**/*.db
+**/*.sqlite3
+
+## Exclude Node artifacts (publish should be source-only here)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+## Exclude OS/editor junk
+.DS_Store
+.idea/
+.vscode/
