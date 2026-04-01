@@ -1,6 +1,6 @@
 {
   "name": "@shaoxing-xie/openclaw-data-china-stock",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "A-share / ETF / option data for OpenClaw: unified market_data, P0/P1 A-share tools, stock views, multi-source fallback.",
   "type": "module",
   "main": "index.ts",
@@ -36,4 +36,3 @@
     }
   }
 }
-
