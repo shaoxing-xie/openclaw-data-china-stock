@@ -916,7 +916,7 @@
         "properties": {
           "index_code": {
             "type": "string",
-            "description": "指数代码，如 000300",
+            "description": "6 位指数代码，如沪深300=000300、深证成指=399001；纯数字误多打位时会自动取前 6 位",
             "default": "000300"
           },
           "include_weight": {

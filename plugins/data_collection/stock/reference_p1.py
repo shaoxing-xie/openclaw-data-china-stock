@@ -41,6 +41,20 @@ from plugins.data_collection.stock.fundamentals_extended import (
 
 logger = logging.getLogger(__name__)
 
+
+def _norm_index_code(raw: str) -> str:
+    """
+    中证/常用行情指数代码多为 6 位数字（如 000300、399001）。
+    误粘贴多余位（如 00030010）时按纯数字前 6 位截断，避免各源无数据或 AkShare 内部异常。
+    """
+    s = (raw or "").strip()
+    if not s:
+        return ""
+    if s.isdigit() and len(s) > 6:
+        return s[:6]
+    return s
+
+
 try:
     import akshare as ak
 
@@ -216,9 +230,12 @@ def tool_fetch_index_constituents(
     if not AKSHARE_AVAILABLE:
         return _err_payload("AkShare 未安装")
 
-    sym = (index_code or "").strip()
+    raw = (index_code or "").strip()
+    sym = _norm_index_code(raw)
     if not sym:
-        return _err_payload("需要 index_code（如 000300）")
+        return _err_payload("需要 index_code（如沪深300=000300、深证成指=399001）")
+    if raw != sym:
+        logger.info("index_code normalized: %r -> %r", raw, sym)
 
     pref = normalize_provider_preference(provider_preference)
 

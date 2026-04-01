@@ -44,7 +44,20 @@ class TestReferenceP1(unittest.TestCase):
             res = r1.tool_fetch_index_constituents("000300", include_weight=False)
 
         self.assertTrue(res["success"])
-        fake.index_stock_cons_csindex.assert_called_once()
+        fake.index_stock_cons_csindex.assert_called_once_with(symbol="000300")
+
+    def test_index_constituents_strips_extra_digits(self):
+        from plugins.data_collection.stock import reference_p1 as r1
+
+        df = pd.DataFrame({"code": ["600000"]})
+        fake = MagicMock()
+        fake.index_stock_cons_csindex.return_value = df
+
+        with patch.object(r1, "AKSHARE_AVAILABLE", True), patch.object(r1, "ak", fake):
+            res = r1.tool_fetch_index_constituents("00030010", include_weight=False)
+
+        self.assertTrue(res["success"])
+        fake.index_stock_cons_csindex.assert_called_once_with(symbol="000300")
 
     def test_research_news(self):
         from plugins.data_collection.stock import reference_p1 as r1
