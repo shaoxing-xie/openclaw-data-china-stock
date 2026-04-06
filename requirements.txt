@@ -16,3 +16,6 @@ yfinance
 mootdx
 efinance
 
+# Optional: DuckDB for faster cache queries (improves performance for large historical datasets)
+duckdb>=1.1.0
+
