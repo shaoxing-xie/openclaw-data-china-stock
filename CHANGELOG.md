@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-04-17 (v0.4.3)
+
+### Documentation refinement
+
+- 重构 `README.md` 与 `README_EN.md` 为统一的信息架构（痛点、核心能力、快速开始、运行说明、测试与贡献），提高首次阅读和接入效率。
+- 增补 ClawHub 安装兼容命令（带/不带 `clawhub:` 前缀）与可点击的 GitHub Issues 链接，降低不同 CLI 版本下的安装与反馈门槛。
+
 ## 2026-04-17 (v0.4.2)
 
 ### Critical fix: tail-session compatibility restore
