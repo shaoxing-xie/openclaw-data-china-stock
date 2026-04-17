@@ -15,6 +15,15 @@ This plugin provides a ClawHub/OpenClaw compatible toolset for collecting A-shar
 - `tool_get_option_contracts`: Fetch option contracts by underlying.
 - `tool_read_market_data` / `tool_read_*`: Read previously cached Parquet data (when enabled).
 
+### Paired skill suite
+
+- `skills/china-macro-analyst/SKILL.md`
+- `skills/technical-analyst/SKILL.md`
+- `skills/market-scanner/SKILL.md`
+- `skills/fund-flow-analyst/SKILL.md`
+- `skills/strategy-backtester/SKILL.md` (MVP mode)
+- `skills/fundamental-analyst/SKILL.md`
+
 ### China macro analyst tools
 
 - **Primary**: `tool_fetch_macro_data` / `tool_fetch_macro_snapshot`

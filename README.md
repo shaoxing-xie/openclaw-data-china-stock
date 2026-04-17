@@ -6,7 +6,21 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![OpenClaw](https://img.shields.io/badge/OpenClaw-Plugin-blue)](https://openclaw.ai/)
 
-一句话概述：为 OpenClaw Agent 提供统一的行情采集、58 指标计算与宏观数据接口。
+一句话概述：为 OpenClaw Agent 提供统一行情采集、58 指标计算，并以“工具+Skill”成对输出投研能力。
+
+## v0.5.0 升级亮点（单版本）
+
+- 新增 5 个 Skill，与现有宏观 Skill 组成 6 大分析方向：
+  - `technical-analyst`
+  - `market-scanner`
+  - `fund-flow-analyst`
+  - `strategy-backtester`（MVP 轻回测编排）
+  - `fundamental-analyst`
+  - `china-macro-analyst`（既有）
+- 能力结构从“工具可调用”升级为“工具 + Skill 可直接消费”：
+  - 工具层负责数据采集与计算
+  - Skill 层负责结构化分析、证据约束、风险反证与统一输出契约
+- 发布策略：本次 5 个 Skill 一次性升级发布（非分步小版本）
 
 ## 为什么你会需要它
 
@@ -51,7 +65,17 @@
   - `docs/macro/error_codes.md`
   - `docs/macro/dq_policy.md`
 
-### 4) 面向 OpenClaw Agent 的工程化集成
+### 4) Skill 能力层（v0.5.0+）
+
+- 技术分析：`skills/technical-analyst/SKILL.md`
+- 市场扫描：`skills/market-scanner/SKILL.md`
+- 资金流分析：`skills/fund-flow-analyst/SKILL.md`
+- 策略回测（MVP）：`skills/strategy-backtester/SKILL.md`
+- 基本面分析：`skills/fundamental-analyst/SKILL.md`
+- 宏观分析（既有）：`skills/china-macro-analyst/SKILL.md`
+- 统一规范：`skills/SKILL_CONTRACT.md`
+
+### 5) 面向 OpenClaw Agent 的工程化集成
 
 - `config/tools_manifest.json` + `tool_runner.py` 统一路由
 - 支持开发态快速注册：`scripts/register_openclaw_dev.py`
@@ -96,17 +120,36 @@ python -m pip install -r requirements.txt
 - “请拉取 510300 最近一年日线并计算 RSI、MACD、布林带。”
 - “请给出今日 A 股资金流最强行业和对应 ETF。”
 - “请输出最新宏观快照，并判断当前美林时钟象限。”
+- “请做一份 510300 技术面分析，输出趋势/动量/波动和风险反证。”
+- “请扫描当前盘中市场，给出情绪阶段与异动清单。”
+- “请解读今天主力与北向资金是否共振。”
+- “请给出贵州茅台基本面四维评分和估值偏离。”
+- “请对 510300 的均线策略做回测评估，并说明当前是 MVP 模式限制。”
 
 ## 文档导航
 
 - 安装与部署：`INSTALL.md`
 - 技术指标明细：`plugins/data_collection/technical_indicators/README.md`
+- Skill 总规范：`skills/SKILL_CONTRACT.md`
+- 技术分析 Skill：`skills/technical-analyst/SKILL.md`
+- 市场扫描 Skill：`skills/market-scanner/SKILL.md`
+- 资金流分析 Skill：`skills/fund-flow-analyst/SKILL.md`
+- 策略回测 Skill：`skills/strategy-backtester/SKILL.md`
+- 基本面分析 Skill：`skills/fundamental-analyst/SKILL.md`
 - 宏观 Skill：`skills/china-macro-analyst/SKILL.md`
 - 宏观 API / 错误码 / 数据质量：
   - `docs/macro/api_contract.md`
   - `docs/macro/error_codes.md`
   - `docs/macro/dq_policy.md`
 - 版本发布记录：`CHANGELOG.md`
+
+## 兼容性与已知限制
+
+- 兼容旧流程：`tool_fetch_macro_*` 兼容入口仍保留。
+- `strategy-backtester` 当前为 MVP 编排模式：
+  - 基于 `tool_fetch_market_data` + `tool_calculate_technical_indicators`
+  - 未引入独立 `tool_backtest_*` 专用工具链
+  - 输出会显式声明能力边界与限制
 
 ## 回归测试
 

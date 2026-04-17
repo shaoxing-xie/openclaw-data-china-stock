@@ -372,6 +372,9 @@
       "label": "获取板块轮动数据",
       "description": "全列表截面：行业优先 AkShare stock_board_industry_summary_ths（同花顺页），其次新浪 stock_sector_spot，再东财 push2/AkShare；概念优先新浪「概念」，再东财概念列表/JSONP。period 仅对东财概念 JSONP 有效；成功返回可含 data_source。",
       "description_short": "板块轮动（THS/新浪优先，东财备用）。",
+      "scope": "market_scanner",
+      "recommended": true,
+      "tool_group": "market_structure",
       "parameters": {
         "type": "object",
         "properties": {
@@ -408,6 +411,9 @@
       "label": "判断交易时间状态",
       "description": "判断 A 股当前是否处于连续竞价等。返回 data.allows_intraday_continuous_wording：为 false 时（开盘前/午休/收盘后/非交易日）\n禁止将指数/ETF 行情写成「已开盘、今日今开、盘中最高最低」；须遵守 data.quote_narration_rule_cn。\nAgent 在写 A 股「实时/盘中」正文前**必须先调用**本工具。\n",
       "description_short": "交易时段判断；写A股盘中表述前必调，见 quote_narration_rule_cn。",
+      "scope": "market_scanner",
+      "recommended": true,
+      "tool_group": "market_guardrails",
       "parameters": {
         "type": "object",
         "properties": {}
@@ -662,6 +668,9 @@
       "label": "获取A股财务指标",
       "description": "批量获取A股个股最新财务指标（PE_TTM、PB、ROE、股息率等），供量化选股或单独查询。",
       "description_short": "批量获取A股个股最新财务指标（PE_TTM、PB、ROE、股息率等）…",
+      "scope": "fundamental_analyst",
+      "recommended": true,
+      "tool_group": "primary_fundamental",
       "parameters": {
         "type": "object",
         "properties": {
@@ -706,6 +715,9 @@
       "label": "获取A股财务报表",
       "description": "按报告期的资产负债表/利润表/现金流量表。东财报告期表优先，可选新浪 stock_financial_report_sina 降级。statement_type=balance|income|cashflow。provider_preference=auto|eastmoney|sina。",
       "description_short": "三大财务报表（报告期）。",
+      "scope": "fundamental_analyst",
+      "recommended": true,
+      "tool_group": "primary_fundamental",
       "parameters": {
         "type": "object",
         "properties": {
@@ -1219,6 +1231,9 @@
       "label": "获取涨停股列表",
       "description": "获取指定日或区间的涨停股列表（涨停回马枪数据源）。",
       "description_short": "获取指定日或区间的涨停股列表（涨停回马枪数据源）。",
+      "scope": "market_scanner",
+      "recommended": true,
+      "tool_group": "market_sentiment",
       "parameters": {
         "type": "object",
         "properties": {
@@ -1359,6 +1374,9 @@
       "label": "北向资金流向",
       "description": "获取北向资金流向数据。",
       "description_short": "获取北向资金流向数据。",
+      "scope": "fund_flow_analyst",
+      "recommended": true,
+      "tool_group": "primary_fund_flow",
       "parameters": {
         "type": "object",
         "properties": {
@@ -1379,6 +1397,9 @@
       "label": "A股资金流向（统一）",
       "description": "A 股大盘/板块/个股资金流向（AkShare 东方财富、同花顺等多源链；原始数据非投资建议，口径以数据源页面为准）。query_kind：market_history（大盘历史）| sector_rank（板块排名）| stock_rank（个股排名）| stock_history（单股序列）| big_deal（大单：东财 push2 限页「大单净流入」排序快照→同花顺 HTML 限页（BIG_DEAL_THS_MAX_PAGES）→AkShare 全量；非逐笔、字段可能不同）| main_force_rank（主力净流入排名）| sector_drill（板块成分资金流+可选历史）。",
       "description_short": "A股资金流向统一接口（东财/同花顺）。",
+      "scope": "fund_flow_analyst",
+      "recommended": true,
+      "tool_group": "primary_fund_flow",
       "parameters": {
         "type": "object",
         "properties": {
@@ -1868,6 +1889,9 @@
       "label": "获取市场数据（跨资产统一入口）",
       "description": "Cross-asset unified entry. asset_type= index|etf|option|stock; view 含 realtime|historical|minute|opening|greeks|global_spot|iopv_snapshot； stock 扩展 timeshare（当日分时）|pre_market（盘前）|market_overview（沪深市场总貌，可不填 asset_code）|valuation_snapshot（估值快照，委托财务指标）。",
       "description_short": "跨资产统一入口（推荐）",
+      "scope": "core_market",
+      "recommended": true,
+      "tool_group": "primary_market_data",
       "parameters": {
         "type": "object",
         "properties": {
@@ -1924,6 +1948,9 @@
       "id": "tool_calculate_technical_indicators",
       "label": "计算技术指标（通用）",
       "description": "基于历史 OHLCV 计算技术指标（P0/P1/P2 体系，P0=19/P1=10/P2=29）。默认 TA-Lib 优先、pandas-ta 自动降级，支持 append/standalone 返回模式。",
+      "scope": "technical_analyst",
+      "recommended": true,
+      "tool_group": "primary_technical",
       "parameters": {
         "type": "object",
         "properties": {

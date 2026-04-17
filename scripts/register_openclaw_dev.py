@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Register dev plugin + macro skill into local OpenClaw runtime.
+"""Register dev plugin + skill set into local OpenClaw runtime.
 
 Goals:
 - Keep existing registrations intact.
 - Ensure OpenClaw uses this development repo for plugin tool discovery.
-- Expose china-macro-analyst skill to workspace agents.
+- Expose repository skills to workspace agents.
 """
 
 from __future__ import annotations
@@ -18,10 +18,15 @@ from typing import Any, Dict, List
 REPO_ROOT = Path(__file__).resolve().parents[1]
 OPENCLAW_JSON = Path.home() / ".openclaw" / "openclaw.json"
 PLUGIN_ID = "openclaw-data-china-stock"
-SKILL_NAME = "china-macro-analyst"
-SKILL_SRC = REPO_ROOT / "skills" / SKILL_NAME
+SKILL_NAMES = [
+    "china-macro-analyst",
+    "technical-analyst",
+    "market-scanner",
+    "fund-flow-analyst",
+    "strategy-backtester",
+    "fundamental-analyst",
+]
 WORKSPACE_SKILLS = Path.home() / ".openclaw" / "workspaces" / "etf-options-ai-assistant" / "skills"
-SKILL_DST = WORKSPACE_SKILLS / SKILL_NAME
 
 
 def _ensure_plugin_registration(cfg: Dict[str, Any]) -> None:
@@ -44,15 +49,21 @@ def _ensure_plugin_registration(cfg: Dict[str, Any]) -> None:
     entry_cfg["manifestPath"] = str(REPO_ROOT / "config" / "tools_manifest.json")
 
 
-def _ensure_skill_symlink() -> None:
+def _ensure_skill_symlink(skill_name: str) -> str:
+    skill_src = REPO_ROOT / "skills" / skill_name
+    skill_dst = WORKSPACE_SKILLS / skill_name
+    if not skill_src.exists():
+        raise FileNotFoundError(f"skill source not found: {skill_src}")
+
     WORKSPACE_SKILLS.mkdir(parents=True, exist_ok=True)
-    if SKILL_DST.exists() or SKILL_DST.is_symlink():
-        if SKILL_DST.is_symlink() and SKILL_DST.resolve() == SKILL_SRC:
-            return
-        if SKILL_DST.is_dir() and not SKILL_DST.is_symlink():
-            return
-        SKILL_DST.unlink(missing_ok=True)
-    os.symlink(SKILL_SRC, SKILL_DST)
+    if skill_dst.exists() or skill_dst.is_symlink():
+        if skill_dst.is_symlink() and skill_dst.resolve() == skill_src:
+            return str(skill_dst)
+        if skill_dst.is_dir() and not skill_dst.is_symlink():
+            return str(skill_dst)
+        skill_dst.unlink(missing_ok=True)
+    os.symlink(skill_src, skill_dst)
+    return str(skill_dst)
 
 
 def _ensure_agent_skill_binding(cfg: Dict[str, Any]) -> None:
@@ -61,21 +72,19 @@ def _ensure_agent_skill_binding(cfg: Dict[str, Any]) -> None:
         workspace = str(agent.get("workspace", ""))
         if workspace.endswith("/etf-options-ai-assistant"):
             skills: List[str] = agent.setdefault("skills", [])
-            if SKILL_NAME not in skills:
-                skills.append(SKILL_NAME)
+            for skill_name in SKILL_NAMES:
+                if skill_name not in skills:
+                    skills.append(skill_name)
 
 
 def main() -> int:
     if not OPENCLAW_JSON.exists():
         raise FileNotFoundError(f"openclaw config not found: {OPENCLAW_JSON}")
-    if not SKILL_SRC.exists():
-        raise FileNotFoundError(f"skill source not found: {SKILL_SRC}")
-
     cfg = json.loads(OPENCLAW_JSON.read_text(encoding="utf-8"))
     _ensure_plugin_registration(cfg)
     _ensure_agent_skill_binding(cfg)
     OPENCLAW_JSON.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    _ensure_skill_symlink()
+    symlink_paths = [_ensure_skill_symlink(skill_name) for skill_name in SKILL_NAMES]
 
     print(
         json.dumps(
@@ -85,7 +94,7 @@ def main() -> int:
                 "plugin_repo_path": str(REPO_ROOT),
                 "plugin_manifest": str(REPO_ROOT / "config" / "tools_manifest.json"),
                 "plugin_runner": str(REPO_ROOT / "tool_runner.py"),
-                "skill_symlink": str(SKILL_DST),
+                "skill_symlinks": symlink_paths,
             },
             ensure_ascii=False,
         )

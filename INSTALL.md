@@ -60,10 +60,9 @@ python -m pytest -q tests/test_manifest_tool_map_parity.py tests/test_tool_runne
 
 并执行一次真实数据 smoke（index/etf 任一标的）验证工具可用。
 
-## 6.5 开发环境注册（让 OpenClaw 识别新增工具与 Skill）
+## 6.5 开发环境注册（让 OpenClaw 识别新增工具与 Skills）
 
-如果你在本仓库内开发，并希望 **OpenClaw 直接使用开发目录的工具清单**，以及识别
-`china-macro-analyst` Skill，可以执行：
+如果你在本仓库内开发，并希望 **OpenClaw 直接使用开发目录的工具清单**，以及识别本仓库 Skills，可以执行：
 
 ```bash
 .venv/bin/python scripts/register_openclaw_dev.py
@@ -74,8 +73,14 @@ python -m pytest -q tests/test_manifest_tool_map_parity.py tests/test_tool_runne
 - 以“仅追加、不破坏原配置”的方式更新 `~/.openclaw/openclaw.json`
   - 将 `openclaw-data-china-stock` 插件 entry 配置指向本仓库的 `tool_runner.py` 与 `config/tools_manifest.json`
   - 将本仓库路径加入 `plugins.load.paths`
-- 将 `skills/china-macro-analyst` 软链到 OpenClaw 工作区的 `skills/` 目录
-- 对 `workspace=/etf-options-ai-assistant` 的 agent 列表追加 `china-macro-analyst` skill 引用（若不存在）
+- 将以下 Skill 软链到 OpenClaw 工作区的 `skills/` 目录：
+  - `china-macro-analyst`
+  - `technical-analyst`
+  - `market-scanner`
+  - `fund-flow-analyst`
+  - `strategy-backtester`
+  - `fundamental-analyst`
+- 对 `workspace=/etf-options-ai-assistant` 的 agent 列表追加上述 skill 引用（若不存在）
 
 ## 7. 常见问题
 

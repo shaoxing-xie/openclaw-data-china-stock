@@ -1,5 +1,37 @@
 # Changelog
 
+## 2026-04-17 (v0.5.0)
+
+### Major: paired tool + skill expansion
+
+- 新增 5 个 Skill，完成“工具 + Skill”成对能力扩展：
+  - `skills/technical-analyst`
+  - `skills/market-scanner`
+  - `skills/fund-flow-analyst`
+  - `skills/strategy-backtester`（MVP）
+  - `skills/fundamental-analyst`
+- 与既有 `skills/china-macro-analyst` 共同形成 6 大分析方向（技术、扫描、资金、回测、基本面、宏观）。
+- 新增统一规范文档：`skills/SKILL_CONTRACT.md`，统一 frontmatter、章节结构、输出契约与安全规则。
+
+### Registration and manifest governance
+
+- 升级 `scripts/register_openclaw_dev.py`，从单 Skill 注册扩展为 6 个 Skills 一次注册（含软链与 agent skills 绑定幂等处理）。
+- 为核心工具补齐 `scope` / `tool_group` / `recommended` 标签，提升 Skill-Tool 边界机器可识别性：
+  - 技术分析：`tool_calculate_technical_indicators`
+  - 市场扫描：`tool_check_trading_status`、`tool_fetch_sector_data`、`tool_fetch_limit_up_stocks`
+  - 资金流分析：`tool_fetch_a_share_fund_flow`、`tool_fetch_northbound_flow`
+  - 基本面分析：`tool_fetch_stock_financials`、`tool_fetch_stock_financial_reports`
+  - 跨域底座：`tool_fetch_market_data`
+
+### Tests and docs
+
+- 新增测试：
+  - `tests/test_skill_metadata_integrity.py`
+  - `tests/test_skill_tool_mapping.py`
+  - `tests/test_skill_output_contract_smoke.py`
+- 更新 `README.md` 与 `INSTALL.md`，补充 v0.5.0 单版本升级说明、6 个 Skill 导航与开发态注册说明。
+- 版本统一升级到 `0.5.0`（`package.json` / `openclaw.plugin.json`）。
+
 ## 2026-04-17 (v0.4.3)
 
 ### Documentation refinement
