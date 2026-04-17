@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-04-17 (v0.5.1)
+
+### Release preparation
+
+- 按 ClawHub 发布规范完成发布前预检：版本一致性、工作区状态与关键 Skill 测试。
+- 基于 v0.5.0 技能扩展内容进行补丁发布，确保仓库提交与 ClawHub 版本对齐。
+
 ## 2026-04-17 (v0.5.0)
 
 ### Major: paired tool + skill expansion
