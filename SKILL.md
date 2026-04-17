@@ -15,6 +15,12 @@ This plugin provides a ClawHub/OpenClaw compatible toolset for collecting A-shar
 - `tool_get_option_contracts`: Fetch option contracts by underlying.
 - `tool_read_market_data` / `tool_read_*`: Read previously cached Parquet data (when enabled).
 
+### China macro analyst tools
+
+- **Primary**: `tool_fetch_macro_data` / `tool_fetch_macro_snapshot`
+- **Compatibility wrappers**: `tool_fetch_macro_*` (21 tools; kept for backward compatibility)
+- **Skill**: `skills/china-macro-analyst/SKILL.md` (institutional 4-section narrative template; rules in `macro_config.yaml`)
+
 ### Fund-flow tools (pick one job, do not duplicate)
 
 - **`tool_capital_flow`**: Single-stock **summary** for workflows that need `flow_judgement` / `risk_flags` style outputs (e.g. limit-up strategies).
@@ -63,6 +69,20 @@ tools:
       period: "5"
       start_date: "20260201"
       end_date: "20260228"
+```
+
+Example: fetch latest CPI and use macro snapshot:
+
+```yaml
+tools:
+  - name: tool_fetch_macro_data
+    params:
+      dataset: cpi
+      latest_only: true
+  - name: tool_fetch_macro_snapshot
+    params:
+      scope: monthly
+      include_quadrant: true
 ```
 
 ## Cache policy

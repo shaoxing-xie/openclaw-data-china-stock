@@ -390,6 +390,99 @@ TOOL_MAP: Dict[str, ToolSpec] = {
         module_path="plugins.data_collection.morning_brief_fetchers",
         function_name="tool_fetch_announcement_digest",
     ),
+    # Macro (unified + compatibility wrappers)
+    "tool_fetch_macro_data": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_data",
+    ),
+    "tool_fetch_macro_snapshot": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_snapshot",
+    ),
+    "tool_fetch_macro_pmi": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_pmi",
+    ),
+    "tool_fetch_macro_cx_pmi": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_cx_pmi",
+    ),
+    "tool_fetch_macro_cx_services_pmi": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_cx_services_pmi",
+    ),
+    "tool_fetch_macro_enterprise_boom": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_enterprise_boom",
+    ),
+    "tool_fetch_macro_lpi": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_lpi",
+    ),
+    "tool_fetch_macro_cpi": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_cpi",
+    ),
+    "tool_fetch_macro_ppi": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_ppi",
+    ),
+    "tool_fetch_macro_m2": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_m2",
+    ),
+    "tool_fetch_macro_social_financing": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_social_financing",
+    ),
+    "tool_fetch_macro_new_credit": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_new_credit",
+    ),
+    "tool_fetch_macro_lpr": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_lpr",
+    ),
+    "tool_fetch_macro_fx_reserves": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_fx_reserves",
+    ),
+    "tool_fetch_macro_gdp": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_gdp",
+    ),
+    "tool_fetch_macro_industrial_value": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_industrial_value",
+    ),
+    "tool_fetch_macro_fixed_asset": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_fixed_asset",
+    ),
+    "tool_fetch_macro_leverage": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_leverage",
+    ),
+    "tool_fetch_macro_exports_imports": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_exports_imports",
+    ),
+    "tool_fetch_macro_trade_balance": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_trade_balance",
+    ),
+    "tool_fetch_macro_exports_yoy": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_exports_yoy",
+    ),
+    "tool_fetch_macro_unemployment": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_unemployment",
+    ),
+    "tool_fetch_macro_tax_receipts": ToolSpec(
+        module_path="plugins.data_collection.macro.tools",
+        function_name="tool_fetch_macro_tax_receipts",
+    ),
     "tool_fetch_industry_news_brief": ToolSpec(
         module_path="plugins.data_collection.morning_brief_fetchers",
         function_name="tool_fetch_industry_news_brief",

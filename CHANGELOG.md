@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-04-17 (v0.4.0)
+
+### Major: China Macro Analyst integration
+
+- 新增宏观采集模块 `plugins/data_collection/macro/`，提供统一入口 `tool_fetch_macro_data` 与快照入口 `tool_fetch_macro_snapshot`。
+- 新增 21 个兼容宏观工具 `tool_fetch_macro_*`，内部统一路由到 dataset 契约。
+- 工具返回统一暴露数据质量字段：`as_of`、`staleness_days`、`data_lag_days`、`revision_policy`、`warnings`。
+- 新增 Skill：`skills/china-macro-analyst`，采用机构化四段叙事模板并外置规则到 `macro_config.yaml`。
+- 新增第三方接入文档：`docs/macro/api_contract.md`、`docs/macro/error_codes.md`、`docs/macro/dq_policy.md` 与 `examples/macro/*.json`。
+
+### Quality and tests
+
+- 新增测试：`tests/test_macro_tools.py`、`tests/test_macro_skill.py`。
+- 保持 manifest/tool_runner 对齐，新增宏观工具后仍可通过 parity 校验。
+
 ## 2026-04-16
 
 ### Major Upgrade: Technical Indicators Expansion

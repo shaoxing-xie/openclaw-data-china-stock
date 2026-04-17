@@ -14,6 +14,7 @@ An open-source, free **OpenClaw code plugin** that exposes a unified set of `too
 - **Multi-source resilience**: AkShare, Sina, Eastmoney, optional Tushare, plus circuit breaker / retries as configured—reducing single-point outages in Agent workflows.
 - **Cache you control**: Parquet **writes** are off by default; enable `data_cache.enabled=true` in `config.yaml` only when you want local read/write caching.
 - **Retail-oriented tools**: limit-up lists, dragon-tiger, northbound flow, **onshore A-share fund flow** (`tool_fetch_a_share_fund_flow`), **technical stock screeners** (`tool_fetch_a_share_technical_screener`), sector heat, option Greeks, trading-status helpers, and more (as registered in `config/tools_manifest.json`).
+- **China macro (v0.4.0)**: `tool_fetch_macro_data` / `tool_fetch_macro_snapshot` plus 21 compatibility wrappers and the `china-macro-analyst` skill.
 - **Predictable JSON**: Most tools return objects with `success`, `data`, `message`, `source` (and optional cache metadata). A-share extended tools usually add `provider`, `fallback_route`, and `attempt_counts` for observability.
 
 ---
@@ -55,7 +56,7 @@ When **`asset_type=stock`**, besides `realtime` / `historical` / `minute` / `ope
 
 ### Installation
 
-**Published version (check registry): `0.2.3`** (see [CHANGELOG.md](CHANGELOG.md).)
+**Published version (check registry): `0.4.0`** (see [CHANGELOG.md](CHANGELOG.md).)
 
 **From ClawHub / registry (recommended)**
 
@@ -88,6 +89,16 @@ How you mount this folder as an extension depends on your OpenClaw setup (e.g., 
 - **L4 column-contract tests (mock, no network)**: `tests/test_dto_snapshots_l4.py` and `tests/fixtures/l4/*.json` lock `data[0]` keys for selected tools; update fixtures when upstream columns change.
 - **Report diff (release gate)**: `python3 scripts/compare_tool_reports.py <baseline.json> <current.json>` exits `1` if failures increase; set `COMPARE_STRICT=0` to print only. Optional baseline file and CI step: see `.github/workflows/unittest.yml`.
 - Capability cards: [plugins/data_collection/ROADMAP.md](plugins/data_collection/ROADMAP.md) appendices F–G.
+
+### OpenClaw dev registration (recommended)
+
+If you develop in this repository and want OpenClaw to discover the new macro tools and the `china-macro-analyst` skill immediately:
+
+```bash
+.venv/bin/python scripts/register_openclaw_dev.py
+```
+
+This updates `~/.openclaw/openclaw.json` in an append-only way and exposes the skill into the OpenClaw workspace.
 
 ---
 

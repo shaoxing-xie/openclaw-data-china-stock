@@ -1103,6 +1103,9 @@ tools:
   label: 大宗商品现货涨跌
   description: WTI/黄金/铜 yfinance；失败需 Tavily 降级。
   description_short: 原油黄金铜 yfinance。
+  scope: legacy
+  recommended: false
+  tool_group: adjacent_legacy_macro
   parameters:
     type: object
     properties:
@@ -1148,6 +1151,262 @@ tools:
       disable_network:
         type: boolean
         default: false
+- id: tool_fetch_macro_data
+  label: 获取宏观数据（统一入口）
+  description: 中国宏观数据统一入口，按 dataset 获取（PMI/CPI/PPI/M2/社融/GDP/进出口等）。
+  description_short: 宏观数据统一入口（推荐）。
+  scope: china_macro_analyst
+  recommended: true
+  tool_group: primary_macro
+  parameters:
+    type: object
+    properties:
+      dataset:
+        type: string
+        description: 数据集标识，如 pmi_official、cpi、social_financing
+      latest_only:
+        type: boolean
+        default: false
+      lookback:
+        type: number
+        default: 24
+      frequency:
+        type: string
+        default: monthly
+    required:
+    - dataset
+- id: tool_fetch_macro_snapshot
+  label: 获取宏观快照
+  description: 组合增长/通胀/信用关键指标，输出策略解读友好的宏观快照。
+  description_short: 宏观快照（增长/通胀/信用）。
+  scope: china_macro_analyst
+  recommended: true
+  tool_group: primary_macro
+  parameters:
+    type: object
+    properties:
+      scope:
+        type: string
+        default: monthly
+      include_quadrant:
+        type: boolean
+        default: true
+- id: tool_fetch_macro_pmi
+  label: 获取官方PMI
+  description: 获取官方制造业/非制造业 PMI 数据。
+  description_short: 官方 PMI。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties:
+      latest_only:
+        type: boolean
+        default: false
+      months:
+        type: number
+        default: 24
+- id: tool_fetch_macro_cx_pmi
+  label: 获取财新制造业PMI
+  description: 获取财新制造业 PMI 年度序列。
+  description_short: 财新制造业 PMI。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
+- id: tool_fetch_macro_cx_services_pmi
+  label: 获取财新服务业PMI
+  description: 获取财新服务业 PMI 年度序列。
+  description_short: 财新服务业 PMI。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
+- id: tool_fetch_macro_enterprise_boom
+  label: 获取企业景气指数
+  description: 获取企业景气及企业家信心指数。
+  description_short: 企业景气指数。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
+- id: tool_fetch_macro_lpi
+  label: 获取物流景气指数
+  description: 获取物流景气指数（LPI）。
+  description_short: 物流景气指数。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
+- id: tool_fetch_macro_cpi
+  label: 获取CPI
+  description: 获取居民消费价格指数（CPI）。
+  description_short: 居民消费价格指数。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
+- id: tool_fetch_macro_ppi
+  label: 获取PPI
+  description: 获取工业品出厂价格指数（PPI）。
+  description_short: 工业品出厂价格指数。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
+- id: tool_fetch_macro_m2
+  label: 获取M2年率
+  description: 获取 M2 货币供应年率。
+  description_short: M2 年率。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
+- id: tool_fetch_macro_social_financing
+  label: 获取社融增量
+  description: 获取社会融资规模增量。
+  description_short: 社融增量。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
+- id: tool_fetch_macro_new_credit
+  label: 获取新增信贷
+  description: 获取新增人民币信贷数据。
+  description_short: 新增信贷。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
+- id: tool_fetch_macro_lpr
+  label: 获取LPR
+  description: 获取 LPR 各期限数据。
+  description_short: LPR 品种数据。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
+- id: tool_fetch_macro_fx_reserves
+  label: 获取外汇储备
+  description: 获取外汇储备年度数据。
+  description_short: 外汇储备。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
+- id: tool_fetch_macro_gdp
+  label: 获取GDP
+  description: 获取国内生产总值（GDP）相关数据。
+  description_short: GDP 数据。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
+- id: tool_fetch_macro_industrial_value
+  label: 获取工业增加值
+  description: 获取工业增加值增长数据。
+  description_short: 工业增加值增长。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
+- id: tool_fetch_macro_fixed_asset
+  label: 获取固定资产投资
+  description: 获取固定资产投资增速数据。
+  description_short: 固定资产投资增速。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
+- id: tool_fetch_macro_leverage
+  label: 获取宏观杠杆率
+  description: 获取中国宏观杠杆率数据。
+  description_short: 宏观杠杆率。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
+- id: tool_fetch_macro_exports_imports
+  label: 获取进出口增减
+  description: 获取海关进出口增减数据。
+  description_short: 进出口增减。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
+- id: tool_fetch_macro_trade_balance
+  label: 获取贸易帐
+  description: 获取美元计价贸易帐数据。
+  description_short: 美元贸易帐。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
+- id: tool_fetch_macro_exports_yoy
+  label: 获取出口年率
+  description: 获取美元计价出口年率。
+  description_short: 出口年率。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
+- id: tool_fetch_macro_unemployment
+  label: 获取城镇失业率
+  description: 获取城镇调查失业率。
+  description_short: 城镇调查失业率。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
+- id: tool_fetch_macro_tax_receipts
+  label: 获取税收收入
+  description: 获取全国税收收入数据。
+  description_short: 全国税收收入。
+  scope: china_macro_analyst
+  recommended: false
+  tool_group: macro_compat
+  parameters:
+    type: object
+    properties: {}
 - id: tool_fetch_market_data
   label: 获取市场数据（跨资产统一入口）
   description: Cross-asset unified entry. asset_type= index|etf|option|stock; view 含 realtime|historical|minute|opening|greeks|global_spot|iopv_snapshot；

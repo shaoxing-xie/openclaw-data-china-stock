@@ -1,0 +1,7 @@
+{
+  "tool": "tool_fetch_macro_snapshot",
+  "params": {
+    "scope": "monthly",
+    "include_quadrant": true
+  }
+}

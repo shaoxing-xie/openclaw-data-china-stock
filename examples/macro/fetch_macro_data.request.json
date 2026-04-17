@@ -1,0 +1,7 @@
+{
+  "tool": "tool_fetch_macro_data",
+  "params": {
+    "dataset": "cpi",
+    "latest_only": true
+  }
+}

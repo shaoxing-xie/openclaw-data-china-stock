@@ -1,6 +1,6 @@
 {
   "name": "@shaoxing-xie/openclaw-data-china-stock",
-  "version": "0.2.3",
+  "version": "0.4.0",
   "description": "A-share / ETF / option data for OpenClaw: unified market_data, P0/P1 tools, onshore fund flow (tool_fetch_a_share_fund_flow), technical screeners (tool_fetch_a_share_technical_screener), stock views, multi-source fallback.",
   "type": "module",
   "main": "index.ts",
@@ -11,6 +11,7 @@
     "openclaw.plugin.json",
     "config/",
     "plugins/",
+    "skills/",
     "src/",
     "README.md",
     "README_EN.md",
