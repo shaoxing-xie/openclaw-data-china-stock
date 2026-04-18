@@ -1,5 +1,12 @@
 # market-scanner
 
+## 与 `market-sentinel` 如何选
+
+| 场景 | 使用 |
+|------|------|
+| 盘前/盘中/盘后扫描、异动清单、板块热点与事件窗 | `market-scanner`（本 Skill） |
+| 四工具情绪聚合综合分、阶段标签、主导因子与反证（非扫描清单） | `market-sentinel`（见 `skills/market-sentinel/README.md`） |
+
 ## 能力说明
 
 - 盘前、盘中、盘后三模式扫描。

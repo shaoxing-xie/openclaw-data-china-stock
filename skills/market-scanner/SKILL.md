@@ -20,6 +20,8 @@ triggers:
 
 # Market Scanner
 
+**与 `market-sentinel`：本 Skill 主责时段化扫描、异动与市场快照；若要「涨停+资金+北向+板块」四源合成的整体情绪评分与阶段框架，请使用 `skills/market-sentinel/SKILL.md`，勿在本 Skill 中重复承担该聚合职责。**
+
 ## 目标
 
 对 A 股市场进行时段化扫描，输出可执行前的结构化观察结论与风险提示。
