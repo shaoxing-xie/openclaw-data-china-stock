@@ -15,7 +15,11 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+# 插件根目录：默认本脚本所在仓库；若已将插件同步到 ~/.openclaw/extensions/openclaw-data-china-stock，
+# 可设置 OPENCLAW_DATA_CHINA_STOCK_ROOT 指向该目录后再运行本脚本。
+REPO_ROOT = Path(
+    os.environ.get("OPENCLAW_DATA_CHINA_STOCK_ROOT", str(Path(__file__).resolve().parents[1]))
+).resolve()
 OPENCLAW_JSON = Path.home() / ".openclaw" / "openclaw.json"
 PLUGIN_ID = "openclaw-data-china-stock"
 SKILL_NAMES = [
@@ -95,6 +99,7 @@ def main() -> int:
                 "plugin_repo_path": str(REPO_ROOT),
                 "plugin_manifest": str(REPO_ROOT / "config" / "tools_manifest.json"),
                 "plugin_runner": str(REPO_ROOT / "tool_runner.py"),
+                "plugin_root_env": os.environ.get("OPENCLAW_DATA_CHINA_STOCK_ROOT"),
                 "skill_symlinks": symlink_paths,
             },
             ensure_ascii=False,

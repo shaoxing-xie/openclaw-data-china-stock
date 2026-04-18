@@ -83,7 +83,26 @@ python -m pytest -q tests/test_manifest_tool_map_parity.py tests/test_tool_runne
   - `fundamental-analyst`
 - 对 `workspace=/etf-options-ai-assistant` 的 agent 列表追加上述 skill 引用（若不存在）
 
-## 7. 常见问题
+## 7. 部署到运行目录（`~/.openclaw/extensions`）
+
+若希望 Gateway **从扩展目录**加载插件（与开发克隆目录解耦），将仓库同步到运行目录后注册：
+
+```bash
+cd /path/to/openclaw-data-china-stock
+bash scripts/install_plugin_to_runtime.sh
+OPENCLAW_DATA_CHINA_STOCK_ROOT="${HOME}/.openclaw/extensions/openclaw-data-china-stock" \
+  python3 "${HOME}/.openclaw/extensions/openclaw-data-china-stock/scripts/register_openclaw_dev.py"
+```
+
+说明：
+
+- `install_plugin_to_runtime.sh` 使用 `rsync` 同步到默认目标 `~/.openclaw/extensions/openclaw-data-china-stock`（可用环境变量 `OPENCLAW_DATA_CHINA_STOCK_RUNTIME` 覆盖）。
+- `register_openclaw_dev.py` 在未设置环境变量时，以**脚本所在仓库根**为插件根；设置 `OPENCLAW_DATA_CHINA_STOCK_ROOT` 后，**插件入口、`tool_runner.py`、`tools_manifest.json` 与 `skills/` 软链**均指向该目录。
+- 交易助手 workspace `etf-options-ai-assistant` 下各 Agent 的 `skills` 会幂等追加本插件提供的 Skill（含 `market-sentinel`）；四情绪工具由插件 manifest 暴露，需在 **数据采集 Agent 白名单**中包含（见 `etf-options-ai-assistant` 文档「A 股情绪工具与 market-sentinel」）。
+
+同步后请固定解释器（第 5 节）并重启 Gateway。
+
+## 8. 常见问题
 
 - **出现 `TA-Lib 与 pandas-ta 均不可用`**
   - 当前解释器未装好依赖；按本指南第 3-5 步重装并固定解释器。
