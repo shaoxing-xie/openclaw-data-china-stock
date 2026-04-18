@@ -1,0 +1,70 @@
+{
+  "generated_at": "2026-04-18 16:43:39",
+  "api_signatures": {
+    "stock_zt_pool_em": "(date: str = '20241008') -> pandas.DataFrame",
+    "stock_market_fund_flow": "() -> pandas.DataFrame",
+    "stock_sector_fund_flow_rank": "(indicator: str = '今日', sector_type: str = '行业资金流') -> pandas.DataFrame",
+    "stock_individual_fund_flow_rank": "(indicator: str = '5日') -> pandas.DataFrame",
+    "stock_hsgt_fund_flow_summary_em": "() -> pandas.DataFrame",
+    "stock_sector_spot": "(indicator: str = '新浪行业') -> pandas.DataFrame",
+    "stock_board_industry_name_em": "() -> pandas.DataFrame"
+  },
+  "cases": [
+    {
+      "name": "stock_zt_pool_em",
+      "ok": false,
+      "elapsed_ms": 10096,
+      "record_count": 0,
+      "columns_sample": [],
+      "error": "('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))"
+    },
+    {
+      "name": "stock_market_fund_flow",
+      "ok": false,
+      "elapsed_ms": 10116,
+      "record_count": 0,
+      "columns_sample": [],
+      "error": "('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))"
+    },
+    {
+      "name": "stock_sector_fund_flow_rank",
+      "ok": false,
+      "elapsed_ms": 10140,
+      "record_count": 0,
+      "columns_sample": [],
+      "error": "('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))"
+    },
+    {
+      "name": "stock_individual_fund_flow_rank",
+      "ok": false,
+      "elapsed_ms": 10098,
+      "record_count": 0,
+      "columns_sample": [],
+      "error": "('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))"
+    },
+    {
+      "name": "stock_hsgt_fund_flow_summary_em",
+      "ok": false,
+      "elapsed_ms": 10053,
+      "record_count": 0,
+      "columns_sample": [],
+      "error": "('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))"
+    },
+    {
+      "name": "stock_sector_spot_行业",
+      "ok": false,
+      "elapsed_ms": 10009,
+      "record_count": 0,
+      "columns_sample": [],
+      "error": "Expecting value: line 1 column 1 (char 0)"
+    },
+    {
+      "name": "stock_board_industry_name_em",
+      "ok": false,
+      "elapsed_ms": 35017,
+      "record_count": 0,
+      "columns_sample": [],
+      "error": "('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))"
+    }
+  ]
+}

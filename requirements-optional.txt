@@ -1,0 +1,8 @@
+# Optional dependencies (environment-specific enhancements)
+#
+# Install only when needed:
+#   python -m pip install -r requirements-optional.txt
+
+# Optional AKShare Eastmoney header/patch helper.
+# Not required for core functionality; prefer without_proxy_env first.
+akshare-proxy-patch

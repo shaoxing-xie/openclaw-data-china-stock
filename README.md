@@ -75,7 +75,38 @@
 - 宏观分析（既有）：`skills/china-macro-analyst/SKILL.md`
 - 统一规范：`skills/SKILL_CONTRACT.md`
 
-### 5) 面向 OpenClaw Agent 的工程化集成
+### 5) 四个情绪工具（已完成优化收口）
+
+- 覆盖工具：
+  - `tool_fetch_limit_up_stocks`
+  - `tool_fetch_a_share_fund_flow`
+  - `tool_fetch_northbound_flow`
+  - `tool_fetch_sector_data`
+- 统一能力：
+  - 多源降级链 + 质量闸门（结构/规模/null_ratio）
+  - 统一响应契约（`success/source/fallback_route/attempts/data_quality/explanation`）
+  - 交易时段差异化 TTL 缓存（盘中/盘后/日终）
+  - 衍生指标本地计算（不污染上游原始数据）
+- 明确原则：
+  - **无上游且无缓存时直接失败，不生成估计值**
+  - 缓存仅来自历史成功拉取结果，不做虚构填补
+- 关键链路（已拍板）：
+  - `limit_up_pool`: `akshare.stock_zt_pool_em -> stock_zt_pool_previous_em -> stock_zt_pool_strong_em -> stock_zt_pool_sub_new_em -> cache`
+  - `fund_flow`: `THS-first`（东财兜底可选且默认关闭）
+  - `northbound`: `tushare.moneyflow_hsgt -> eastmoney.legacy_hsgt -> cache`
+  - `sector_snapshot`:
+    - industry: `ths_industry_summary -> sina.stock_sector_spot(新浪行业/行业) -> em_push2_industry -> akshare_industry_name_em -> cache`
+    - concept: `sina.stock_sector_spot(概念) -> em_concept_clist -> em_concept_jsonp -> cache`
+- 详细文档：
+  - `docs/sentiment/api_contract.md`
+  - `docs/sentiment/dq_policy.md`
+  - `docs/sentiment/error_codes.md`
+  - `docs/sentiment/akshare_interface_inventory.md`
+  - `docs/sentiment/akshare_interface_validation_report.md`
+  - `docs/sentiment/sentiment_data_object_call_chains.md`
+  - `docs/sentiment/examples.md`
+
+### 6) 面向 OpenClaw Agent 的工程化集成
 
 - `config/tools_manifest.json` + `tool_runner.py` 统一路由
 - 支持开发态快速注册：`scripts/register_openclaw_dev.py`
@@ -105,6 +136,12 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
 python -m pip install -r requirements.txt
+```
+
+如你的网络环境对 AKShare 东方财富链路有额外限制，可按需安装可选增强依赖（非必需）：
+
+```bash
+python -m pip install -r requirements-optional.txt
 ```
 
 ### 开发环境一键注册（推荐）
@@ -186,6 +223,13 @@ python -m pytest -q tests/test_manifest_tool_map_parity.py tests/test_tool_runne
 - `source`
 
 部分工具会补充 `count`、`timestamp`、`cache_hit`、`provider`、`fallback_route`、`attempt_counts` 等字段，用于排障和可观测性。
+
+四个情绪工具额外统一遵循：
+- `data_quality`: `fresh | cached | partial`
+- `attempts`: 每个上游源调用结果
+- `used_fallback`: 最终命中是否为降级路径
+- `error_code/error_message`: 上游失败可诊断信息
+- `explanation`: 可读解释（供第三方直接消费）
 
 ## 贡献
 

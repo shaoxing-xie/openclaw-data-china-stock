@@ -94,14 +94,14 @@
     {
       "id": "tool_fetch_index_data",
       "label": "获取指数数据（统一入口）",
-      "description": "data_type=realtime|historical|minute|opening|global_spot，内部委托 plugins.data_collection.index.*。",
+      "description": "data_type=realtime|historical|minute|opening|global_spot（全球主要指数最新快照），内部委托 plugins.data_collection.index.*。",
       "description_short": "指数数据统一入口（merged）。",
       "parameters": {
         "type": "object",
         "properties": {
           "data_type": {
             "type": "string",
-            "description": "realtime|historical|minute|opening|global_spot"
+            "description": "realtime|historical|minute|opening|global_spot（全球指数最新快照）"
           },
           "index_code": {
             "type": "string",

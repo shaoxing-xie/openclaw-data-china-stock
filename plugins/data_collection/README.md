@@ -44,11 +44,11 @@
 | **financials.py** | `tool_fetch_stock_financials` | PE/PB/ROE 等 |
 | **limit_up/** | `tool_fetch_limit_up_stocks`、`tool_sector_heat_score`、`tool_write_limit_up_with_sector`、`tool_limit_up_daily_flow` | 涨停回马枪数据与日报 |
 | **dragon_tiger.py** | `tool_dragon_tiger_list` | 龙虎榜 |
-| **northbound.py** | `tool_fetch_northbound_flow` | 北向（沪深港通跨境） |
-| **a_share_fund_flow.py** | `tool_fetch_a_share_fund_flow` | A 股境内资金流：大盘/板块/个股排名与序列、大单、主力排名、板块下钻（东财/同花顺多源链）；与 `capital_flow` 摘要工具互补 |
+| **northbound.py** | `tool_fetch_northbound_flow` | 北向（沪深港通跨境，主链路：`tushare.moneyflow_hsgt -> eastmoney.legacy_hsgt -> cache`） |
+| **a_share_fund_flow.py** | `tool_fetch_a_share_fund_flow` | A 股境内资金流：大盘/板块/个股排名与序列、大单、主力排名、板块下钻（THS-first，东财兜底可选且默认关闭）；与 `capital_flow` 摘要工具互补 |
 | **a_share_technical_screener.py** | `tool_fetch_a_share_technical_screener` | A 股技术选股**排名表**（同花顺 `stock_rank_*_ths`：创新高/连续涨跌/量价齐升等）；非本地 MACD/RSI（见 `stock_data_fetcher` / `technical_indicators`） |
 | **capital_flow.py** | `tool_capital_flow` | 个股资金流摘要（涨停回马枪等技能用 `flow_judgement` / `risk_flags`） |
-| **sector.py** | `tool_fetch_sector_data` | 行业/概念板块 |
+| **sector.py** | `tool_fetch_sector_data` | 行业/概念板块（已按最终方案完成多源降级+质量闸门） |
 | **morning_brief_fetchers.py** | `tool_fetch_policy_news`、`tool_fetch_macro_commodities`、`tool_fetch_overnight_futures_digest`、`tool_conditional_overnight_futures_digest`、`tool_fetch_announcement_digest`、`tool_fetch_industry_news_brief` | 盘前/政策；Tavily 等见模块 docstring |
 | **utils/** | `tool_get_option_contracts`、`tool_check_trading_status`、`tool_get_a_share_market_regime`、`tool_filter_a_share_tradability`、`tool_fetch_multiple_etf_realtime`、`tool_fetch_multiple_index_realtime`、`tool_fetch_multiple_option_realtime`、`tool_fetch_multiple_option_greeks` | `check_trading_status` 返回 `allows_intraday_continuous_wording`、`quote_narration_rule_cn` |
 | **tick/** | `fetch_tick_with_quality` | **未注册** `tool_*`，供 Agent 代码内调用；依赖 `tick_client` + 根目录 `config.yaml` |
@@ -242,9 +242,10 @@ result = tool_fetch_index_opening(index_codes="000001,000300,399001")
 #### 3. index/fetch_global.py - 全球指数数据
 
 **功能说明**：
-- 获取全球主要指数的实时行情数据
+- 获取全球主要指数的**最新快照**（各源延迟不一；非交易所毫秒级「实时」）
+- 数据源顺序由 `data_sources.global_index.latest.priority` 配置，默认：`yfinance` → **FMP** `stable/quote`（需 `FMP_API_KEY` / `FMP_API_KEY_BACKUP` 等，见主仓 `config/domains/market_data.yaml`）→ 新浪
 - 融合 Coze `get_index_global_spot.py` 的逻辑
-- 用于盘后分析和开盘前分析
+- 用于盘后分析、开盘前快扫等
 
 **使用方法**：
 ```python
@@ -262,14 +263,14 @@ result = tool_fetch_global_index_spot(index_codes="int_dji,int_nasdaq,int_sp500"
   - 如果不提供，默认返回：int_dji(道琼斯), int_nasdaq(纳斯达克), int_sp500(标普500), int_nikkei(日经225), rt_hkHSI(恒生指数)
   - 支持的指数代码：int_dji, int_nasdaq, int_sp500, int_nikkei, rt_hkHSI
 
-**输出格式**：
+**输出格式**（成功时可能含 `semantics: "latest_snapshot"`、`note`、多源时 `sources_used`）：
 ```python
 {
     "success": True,
     "count": 5,
     "data": [
         {
-            "code": "int_dji",
+            "code": "^DJI",
             "name": "道琼斯",
             "price": 38500.50,
             "change": 150.20,
@@ -277,16 +278,22 @@ result = tool_fetch_global_index_spot(index_codes="int_dji,int_nasdaq,int_sp500"
             "timestamp": "2025-01-15 14:30:00"
         }
     ],
-    "source": "hq.sinajs.cn",
-    "timestamp": "2025-01-15 14:30:00"
+    "source": "yfinance",
+    "timestamp": "2025-01-15 14:30:00",
+    "semantics": "latest_snapshot",
+    "note": "全球指数为各数据源最新可见值（含延迟），非毫秒级实时行情。"
 }
 ```
 
 **技术实现要点**：
-- 使用新浪财经 `hq.sinajs.cn` 接口
-- 支持GBK编码解码
-- 支持恒生指数多种代码格式自动匹配
-- 包含错误处理和降级机制
+- 顺序默认：`yfinance` → **Financial Modeling Prep** `/stable/quote`（需 key，见 `data_sources.global_index.latest.fmp` 与 `.env` 中 `FMP_API_KEY` / `FMP_API_KEY_BACKUP`）→ 新浪 `hq.sinajs.cn`
+- 多标的时 yfinance 优先尝试 `download` 批量拉取；FMP 按 symbol 请求，429/限额时在同 symbol 上轮换备用 key
+- 新浪路径：GBK、恒生多种代码匹配；部分指数在 FMP Basic 下可能返回 Premium，自动降级到 yfinance/新浪
+
+**部署与配额**：
+- 开发验证在 **本仓库**；同步到 Gateway 时请将 `plugins/data_collection/index/fetch_global.py` 等复制到 `~/.openclaw/extensions/openclaw-data-china-stock/`（勿直接在线改扩展目录调试）。
+- 助手主仓配置：`etf-options-ai-assistant/config/domains/market_data.yaml` + 项目根 `.env` 或 `~/.openclaw/.env`。
+- FMP 免费档约 **250 次/天**；若需省配额，可将 `priority` 设为仅 `yfinance` 在前或关闭 `fmp.enabled`。
 
 **使用场景**：
 - **盘后分析**：分析外盘表现，预测次日A股走势
@@ -590,17 +597,31 @@ from plugins.data_collection.fetch_option_data import tool_fetch_option_greeks
 
 | 模块 | 工具函数 | 说明 |
 |------|----------|------|
-| `limit_up/fetch_limit_up.py` | `tool_fetch_limit_up_stocks` | 涨停池（AkShare `stock_zt_pool_em`），支持单日或区间；可过滤 ST、尾盘涨停等 |
+| `limit_up/fetch_limit_up.py` | `tool_fetch_limit_up_stocks` | 涨停池（最终链路：`stock_zt_pool_em -> previous -> strong -> sub_new -> cache`），支持单日或区间；可过滤 ST、尾盘涨停等 |
 | `limit_up/sector_heat.py` | `tool_sector_heat_score` | 结合涨停列表与板块数据计算热度 0–100 与周期阶段（启动/发酵/等） |
 | `limit_up/daily_report.py` | `tool_write_limit_up_with_sector`，`tool_limit_up_daily_flow` | 盘后写入 `data/limit_up_research/`，可选 Markdown 报告与飞书通知 |
-| `sector.py` | `tool_fetch_sector_data` | 行业/概念板块涨跌与轮动（东方财富优先，AkShare 备用） |
+| `sector.py` | `tool_fetch_sector_data` | 行业/概念板块涨跌与轮动（已拍板：industry `THS->Sina->EM->AkShare->cache`；concept `Sina->EM->EM JSONP->cache`） |
 | `dragon_tiger.py` | `tool_dragon_tiger_list` | 涨停池 ∩ 龙虎榜明细，输出游资相关摘要（依赖 AkShare） |
-| `a_share_fund_flow.py` | `tool_fetch_a_share_fund_flow` | 境内 A 股资金流「可查表」：`query_kind` 区分大盘历史、板块/个股排名、单股序列、大单、主力排名、板块成分下钻；多源链见 [AkShare 资金流向](https://akshare.akfamily.xyz/data/stock/stock.html) 与 [AkShare_fund_flow_probe_notes.md](./AkShare_fund_flow_probe_notes.md) |
+| `a_share_fund_flow.py` | `tool_fetch_a_share_fund_flow` | 境内 A 股资金流「可查表」：`query_kind` 区分大盘历史、板块/个股排名、单股序列、大单、主力排名、板块成分下钻；已切换 THS-first（东财兜底可选且默认关闭） |
 | `a_share_technical_screener.py` | `tool_fetch_a_share_technical_screener` | 技术选股排名表（文档「技术指标」）：`screener_kind` 映射 AkShare `stock_rank_*_ths`；[AkShare 股票数据](https://akshare.akfamily.xyz/data/stock/stock.html) |
 | `capital_flow.py` | `tool_capital_flow` | 个股主力/散户资金流向与简单风险标签（摘要向，与上表互补） |
-| `northbound.py` | `tool_fetch_northbound_flow` | 沪深港通北向资金（跨境；与境内 A 股资金流勿混） |
+| `northbound.py` | `tool_fetch_northbound_flow` | 沪深港通北向资金（主链路：`tushare.moneyflow_hsgt -> eastmoney.legacy_hsgt -> cache`，日终趋势口径） |
 
 插件内导入已统一为 `from plugins.data_collection...`（以项目根目录在 `PYTHONPATH` 中为前提）。
+
+**情绪工具统一文档（新增）**：
+- `docs/sentiment/api_contract.md`
+- `docs/sentiment/dq_policy.md`
+- `docs/sentiment/error_codes.md`
+- `docs/sentiment/akshare_interface_inventory.md`
+- `docs/sentiment/akshare_interface_validation_report.md`
+- `docs/sentiment/sentiment_data_object_call_chains.md`
+- `docs/sentiment/examples.md`
+
+**情绪工具硬约束（已执行）**：
+- 只使用上游可得原始字段作为基础输入，不注入估计值
+- 无上游且无缓存时直接返回失败（不会补估计数据）
+- 缓存仅来自历史成功拉取结果
 
 ---
 

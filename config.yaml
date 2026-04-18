@@ -69,3 +69,17 @@ tushare:
   token: "${TUSHARE_TOKEN}"
   # src/tushare_fallback.py stk_mins 限频；默认 true，显式写出便于查阅
   enable_rate_limit: true
+
+# 全球指数最新快照（plugins/data_collection/index/fetch_global.py）；主仓 etf-options-ai-assistant 以 config/domains/market_data.yaml 为准
+data_sources:
+  global_index:
+    latest:
+      priority:
+        - yfinance
+        - fmp
+        - sina
+      fmp:
+        enabled: true
+        api_keys:
+          - "${FMP_API_KEY}"
+          - "${FMP_API_KEY_BACKUP}"

@@ -7,18 +7,28 @@
 import requests
 import json
 import pandas as pd
-from datetime import datetime
-from typing import Dict, Optional
+import os
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
 import logging
 from contextlib import nullcontext
+
+from plugins.data_collection.sentiment_common import (
+    build_cache_key,
+    cache_get,
+    cache_set,
+    infer_ttl_seconds,
+    normalize_contract,
+)
 
 logger = logging.getLogger(__name__)
 
 try:
-    import akshare as ak  # type: ignore[import]
-    AKSHARE_AVAILABLE = True
+    import tushare as ts  # type: ignore[import]
+    TUSHARE_AVAILABLE = True
 except Exception:
-    AKSHARE_AVAILABLE = False
+    ts = None  # type: ignore[assignment]
+    TUSHARE_AVAILABLE = False
 
 try:
     from plugins.utils.proxy_env import without_proxy_env
@@ -28,6 +38,116 @@ except Exception:
 
     def without_proxy_env(*args, **kwargs):  # type: ignore[no-redef]
         return nullcontext()
+
+
+_TUSHARE_PRO = None
+
+
+def _get_tushare_pro():
+    global _TUSHARE_PRO
+    if _TUSHARE_PRO is not None:
+        return _TUSHARE_PRO
+    if not TUSHARE_AVAILABLE:
+        return None
+    token = (os.environ.get("TUSHARE_TOKEN") or "").strip()
+    if not token:
+        return None
+    try:
+        _TUSHARE_PRO = ts.pro_api(token)
+    except Exception:
+        _TUSHARE_PRO = None
+    return _TUSHARE_PRO
+
+
+def _is_trading_hours(dt: datetime) -> bool:
+    if dt.weekday() >= 5:
+        return False
+    hm = dt.hour * 100 + dt.minute
+    in_morning = 930 <= hm <= 1130
+    in_afternoon = 1300 <= hm <= 1500
+    return in_morning or in_afternoon
+
+
+def _prev_trade_date(dt: datetime) -> str:
+    d = dt - timedelta(days=1)
+    while d.weekday() >= 5:
+        d -= timedelta(days=1)
+    return d.strftime("%Y%m%d")
+
+
+def _fmt_ymd(dt: datetime) -> str:
+    return dt.strftime("%Y%m%d")
+
+
+def _mf_to_yi(v: Optional[str]) -> float:
+    try:
+        return float(v) / 100.0
+    except Exception:
+        return 0.0
+
+
+def _build_tushare_payload(df: pd.DataFrame, query_trade_date: str, note: str) -> Dict:
+    df = df.copy()
+    if "trade_date" in df.columns:
+        df = df.sort_values("trade_date", ascending=False)
+    rows: List[Dict] = []
+    for _, r in df.iterrows():
+        trade_date = str(r.get("trade_date") or "")
+        ymd = f"{trade_date[:4]}-{trade_date[4:6]}-{trade_date[6:8]}" if len(trade_date) == 8 else trade_date
+        hgt = _mf_to_yi(r.get("hgt"))
+        sgt = _mf_to_yi(r.get("sgt"))
+        north = _mf_to_yi(r.get("north_money"))
+        south = _mf_to_yi(r.get("south_money"))
+        rows.append(
+            {
+                "date": ymd,
+                "sh_net": hgt,
+                "sz_net": sgt,
+                "total_net": north if north != 0 else hgt + sgt,
+                "south_money": south,
+            }
+        )
+
+    latest = rows[0] if rows else {"date": query_trade_date, "sh_net": 0.0, "sz_net": 0.0, "total_net": 0.0, "south_money": 0.0}
+    totals = [x["total_net"] for x in rows]
+    cum5 = round(sum(totals[:5]), 2) if totals else None
+    cum20 = round(sum(totals[:20]), 2) if totals else None
+    consecutive = 0
+    if totals:
+        sign = 1 if totals[0] > 0 else -1 if totals[0] < 0 else 0
+        for v in totals:
+            if sign == 0 or (v > 0 and sign > 0) or (v < 0 and sign < 0):
+                consecutive += 1
+            else:
+                break
+
+    signal = _generate_signal({"total_net": latest["total_net"]}, None, consecutive)
+    return {
+        "status": "success",
+        "date": latest["date"],
+        "data": {
+            "sh_net": latest["sh_net"],
+            "sz_net": latest["sz_net"],
+            "total_net": latest["total_net"],
+            "sh_buy": None,
+            "sh_sell": None,
+            "sz_buy": None,
+            "sz_sell": None,
+            "south_money": latest["south_money"],
+        },
+        "cumulative": {"5d": cum5, "20d": cum20},
+        "statistics": {
+            "avg_5d": round(sum(totals[:5]) / min(5, len(totals)), 2) if totals else None,
+            "avg_20d": round(sum(totals[:20]) / min(20, len(totals)), 2) if totals else None,
+            "consecutive_days": consecutive,
+            "trend": "流入" if latest["total_net"] > 0 else "流出" if latest["total_net"] < 0 else "持平",
+        },
+        "signal": signal,
+        "history": rows,
+        "source": "tushare.moneyflow_hsgt",
+        "note": note,
+        "explanation": "Tushare 日频北向汇总数据（收盘后更新），盘中默认返回上一交易日。",
+    }
 
 
 def tool_fetch_northbound_flow(date: str = None, lookback_days: int = 1) -> Dict:
@@ -41,53 +161,60 @@ def tool_fetch_northbound_flow(date: str = None, lookback_days: int = 1) -> Dict
     Returns:
         包含北向资金流向数据的字典
     """
+    cache_key = build_cache_key("northbound_tool", {"date": date, "lookback_days": lookback_days})
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return normalize_contract(
+            success=True,
+            payload=cached,
+            source=cached.get("source", "cache"),
+            attempts=[{"source": "cache", "ok": True, "message": "hit"}],
+            used_fallback=True,
+            data_quality="cached",
+            cache_hit=True,
+        )
+
+    attempts: List[Dict] = []
     try:
         # 默认今天
         if not date:
             date = datetime.now().strftime("%Y-%m-%d")
+        now = datetime.now()
+        query_trade_date = date.replace("-", "") if date else _fmt_ymd(now)
+        note = ""
+        if not date and _is_trading_hours(now):
+            query_trade_date = _prev_trade_date(now)
+            note = "盘中时段返回上一交易日收盘汇总。"
 
-        # 优先：AkShare（更稳定，避免 DataCenter_V3 返回 HTML/BOM/空响应）
-        if AKSHARE_AVAILABLE:
+        pro = _get_tushare_pro()
+        if pro is not None:
             try:
-                ctx = without_proxy_env() if PROXY_ENV_AVAILABLE else nullcontext()
-                with ctx:
-                    df = ak.stock_hsgt_fund_flow_summary_em()
-                if df is not None and not df.empty:
-                    # 仅取北向：沪股通/深股通
-                    df2 = df.copy()
-                    # 标准化列名（AkShare 可能字段略有不同，但核心列稳定）
-                    # 目标：sh_net/sz_net/total_net（单位：亿）
-                    sh = df2[(df2.get("板块") == "沪股通") & (df2.get("资金方向") == "北向")]
-                    sz = df2[(df2.get("板块") == "深股通") & (df2.get("资金方向") == "北向")]
-                    sh_net = float(sh["成交净买额"].iloc[0]) if not sh.empty else 0.0
-                    sz_net = float(sz["成交净买额"].iloc[0]) if not sz.empty else 0.0
-                    total = sh_net + sz_net
-                    return {
-                        "status": "success",
-                        "date": str(df2.get("交易日").iloc[0]) if "交易日" in df2.columns and not df2.empty else date,
-                        "data": {
-                            "sh_net": sh_net,
-                            "sz_net": sz_net,
-                            "total_net": total,
-                            "sh_buy": None,
-                            "sh_sell": None,
-                            "sz_buy": None,
-                            "sz_sell": None,
-                        },
-                        "statistics": {
-                            "avg_5d": None,
-                            "avg_20d": None,
-                            "consecutive_days": None,
-                            "trend": "流入" if total > 0 else "流出" if total < 0 else "持平",
-                        },
-                        "signal": _generate_signal({"total_net": total}, None, 1),
-                        "history": [],
-                        "source": "akshare.stock_hsgt_fund_flow_summary_em",
-                    }
+                df_ts = pro.moneyflow_hsgt(trade_date=query_trade_date)
+                ok = df_ts is not None and not df_ts.empty
+                attempts.append({"source": "tushare.moneyflow_hsgt", "ok": ok, "message": f"trade_date={query_trade_date}"})
+                if not ok:
+                    # fallback to date range when trade_date empty (common in intraday / holiday)
+                    start_date = (datetime.strptime(query_trade_date, "%Y%m%d") - timedelta(days=40)).strftime("%Y%m%d")
+                    df_ts = pro.moneyflow_hsgt(start_date=start_date, end_date=query_trade_date)
+                    ok = df_ts is not None and not df_ts.empty
+                    attempts.append({"source": "tushare.moneyflow_hsgt", "ok": ok, "message": f"range={start_date}-{query_trade_date}"})
+                if ok:
+                    df_ts = df_ts.head(max(1, lookback_days))
+                    payload = _build_tushare_payload(df_ts, query_trade_date, note)
+                    cache_set(cache_key, payload, infer_ttl_seconds("northbound"))
+                    return normalize_contract(
+                        success=True,
+                        payload=payload,
+                        source=payload["source"],
+                        attempts=attempts,
+                        used_fallback=False,
+                        data_quality="fresh" if not note else "previous_day_close",
+                        cache_hit=False,
+                    )
             except Exception as e:  # noqa: BLE001
-                logger.warning("AkShare northbound summary failed, fallback to legacy: %s", e)
-        
-        # 东方财富北向资金接口
+                attempts.append({"source": "tushare.moneyflow_hsgt", "ok": False, "message": str(e)[:160]})
+
+        # 东方财富北向资金接口（AKShare summary 已移除，不再使用）
         url = "http://data.eastmoney.com/DataCenter_V3/Trade2014/HsgtFlow.ashx"
         
         params = {
@@ -120,6 +247,7 @@ def tool_fetch_northbound_flow(date: str = None, lookback_days: int = 1) -> Dict
         text = text.lstrip("\ufeff").strip().rstrip(";").strip()
         
         data = json.loads(text)
+        attempts.append({"source": "eastmoney.legacy_hsgt", "ok": True, "message": "ok"})
         
         if not data or "data" not in data:
             return {
@@ -175,7 +303,7 @@ def tool_fetch_northbound_flow(date: str = None, lookback_days: int = 1) -> Dict
         # 生成信号
         signal = _generate_signal(latest, avg_5d, consecutive_days)
         
-        return {
+        payload = {
             "status": "success",
             "date": latest["date"],
             "data": {
@@ -194,16 +322,40 @@ def tool_fetch_northbound_flow(date: str = None, lookback_days: int = 1) -> Dict
                 "trend": "流入" if latest["total_net"] > 0 else "流出"
             },
             "signal": signal,
-            "history": df.head(lookback_days).to_dict("records")
+            "history": df.head(lookback_days).to_dict("records"),
+            "source": "eastmoney.legacy_hsgt",
+            "note": "Tushare 不可用时回退到 legacy 接口；该链路字段稳定性较弱。",
+            "explanation": "主源 tushare.moneyflow_hsgt 失败后降级到 legacy 以保证可用性。",
         }
+        cache_set(cache_key, payload, infer_ttl_seconds("northbound"))
+        return normalize_contract(
+            success=True,
+            payload=payload,
+            source=payload["source"],
+            attempts=attempts,
+            used_fallback=True,
+            data_quality="partial",
+            cache_hit=False,
+        )
         
     except Exception as e:
         logger.error(f"获取北向资金数据失败: {e}")
-        return {
-            "status": "error",
-            "error": str(e),
-            "date": date if date else datetime.now().strftime("%Y-%m-%d")
-        }
+        attempts.append({"source": "eastmoney.legacy_hsgt", "ok": False, "message": str(e)[:160]})
+        return normalize_contract(
+            success=False,
+            payload={
+                "status": "error",
+                "date": date if date else datetime.now().strftime("%Y-%m-%d"),
+                "explanation": "北向主源与降级源均失败，请稍后重试。",
+            },
+            source="northbound",
+            attempts=attempts,
+            used_fallback=False,
+            data_quality="partial",
+            cache_hit=False,
+            error_code="UPSTREAM_FETCH_FAILED",
+            error_message=str(e),
+        )
 
 
 def _generate_signal(latest: Dict, avg_5d: Optional[float], consecutive_days: int) -> Dict:

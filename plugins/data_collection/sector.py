@@ -13,11 +13,22 @@ import requests
 import json
 import pandas as pd
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 import logging
 from contextlib import nullcontext
 
+from plugins.data_collection.sentiment_common import (
+    build_cache_key,
+    cache_get,
+    cache_set,
+    infer_ttl_seconds,
+    normalize_contract,
+    quality_gate_records,
+)
+
 logger = logging.getLogger(__name__)
+
+_TOP5_HISTORY: Dict[str, List[List[str]]] = {"industry": [], "concept": []}
 
 try:
     from plugins.utils.proxy_env import without_proxy_env
@@ -41,6 +52,18 @@ def tool_fetch_sector_data(sector_type: str = "industry", period: str = "today")
         包含板块涨跌幅数据的字典
     """
     sector_type = (sector_type or "industry").strip().lower()
+    cache_key = build_cache_key("sector_tool", {"sector_type": sector_type, "period": period})
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return normalize_contract(
+            success=True,
+            payload=cached,
+            source=cached.get("data_source", "cache"),
+            attempts=[{"source": "cache", "ok": True, "message": "hit"}],
+            used_fallback=True,
+            data_quality="cached",
+            cache_hit=True,
+        )
     if sector_type not in ("industry", "concept"):
         return {
             "status": "error",
@@ -49,64 +72,108 @@ def tool_fetch_sector_data(sector_type: str = "industry", period: str = "today")
             "date": datetime.now().strftime("%Y-%m-%d"),
         }
 
+    attempts: List[Dict[str, Any]] = []
+
     # ----- 行业：同花顺一览 → 新浪 → 东财 push2 → AkShare -----
     if sector_type == "industry":
-        for src, fetcher in (
+        chain: List[Tuple[str, Callable[[], Optional[pd.DataFrame]]]] = [
             ("ths_industry_summary", _fetch_sector_from_ths_industry_summary),
             ("sina_新浪行业", lambda: _fetch_sector_from_sina("新浪行业")),
             ("sina_行业", lambda: _fetch_sector_from_sina("行业")),
-        ):
+            ("em_push2_industry", lambda: _fetch_sector_data_from_eastmoney(sector_type="industry", period=period)),
+            ("akshare_industry_name_em", lambda: _fetch_sector_data_from_akshare(sector_type="industry")),
+        ]
+        for src, fetcher in chain:
             try:
                 df = fetcher()
-                if df is not None and not df.empty:
-                    return _build_sector_response_from_df(df, sector_type, data_source=src)
+                if df is None or df.empty:
+                    attempts.append({"source": src, "ok": False, "message": "empty dataframe"})
+                    continue
+                gate = quality_gate_records(
+                    df.to_dict("records"),
+                    min_records=30,
+                    required_fields=["sector_name", "change_percent"],
+                )
+                if not gate.get("ok"):
+                    attempts.append(
+                        {
+                            "source": src,
+                            "ok": False,
+                            "message": f"quality gate failed: {gate.get('reason', 'unknown')}",
+                        }
+                    )
+                    continue
+                attempts.append({"source": src, "ok": True, "message": "ok"})
+                return _finalize_sector_response(df, sector_type, src, cache_key, attempts=attempts)
             except Exception as e:  # noqa: BLE001
                 logger.warning("行业板块数据源 %s 失败: %s", src, e)
-        try:
-            df = _fetch_sector_data_from_eastmoney(sector_type="industry", period=period)
-            if df is not None and not df.empty:
-                return _build_sector_response_from_df(df, sector_type, data_source="em_push2_industry")
-        except Exception as e:  # noqa: BLE001
-            logger.warning("东财行业 push2 失败: %s", e)
-        try:
-            df = _fetch_sector_data_from_akshare(sector_type="industry")
-            if df is not None and not df.empty:
-                return _build_sector_response_from_df(df, sector_type, data_source="akshare_industry_name_em")
-        except Exception as e:  # noqa: BLE001
-            logger.error("AkShare 行业备用失败: %s", e)
-        return {
-            "status": "error",
-            "error": "行业板块：同花顺/新浪/东财/AkShare 均无有效数据",
-            "sector_type": sector_type,
-            "date": datetime.now().strftime("%Y-%m-%d"),
-        }
+                attempts.append({"source": src, "ok": False, "message": str(e)[:160]})
+        return normalize_contract(
+            success=False,
+            payload={
+                "status": "error",
+                "error": "行业板块：同花顺/新浪/东财/AkShare 均无有效数据",
+                "sector_type": sector_type,
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "explanation": "所有上游链路均失败且缓存未命中，按规则不使用估计值。",
+            },
+            source="sector",
+            attempts=attempts,
+            used_fallback=False,
+            data_quality="partial",
+            cache_hit=False,
+            error_code="UPSTREAM_FETCH_FAILED",
+            error_message="all sector upstream sources failed",
+        )
 
     # ----- 概念：新浪截面 → 东财概念 clist → 东财 JSONP -----
-    for src, fetcher in (("sina_概念", lambda: _fetch_sector_from_sina("概念")),):
+    chain = [
+        ("sina_概念", lambda: _fetch_sector_from_sina("概念")),
+        ("em_concept_clist", _fetch_sector_from_em_concept_clist),
+        ("em_concept_jsonp", lambda: _fetch_sector_data_from_eastmoney(sector_type="concept", period=period)),
+    ]
+    for src, fetcher in chain:
         try:
             df = fetcher()
-            if df is not None and not df.empty:
-                return _build_sector_response_from_df(df, sector_type, data_source=src)
+            if df is None or df.empty:
+                attempts.append({"source": src, "ok": False, "message": "empty dataframe"})
+                continue
+            gate = quality_gate_records(
+                df.to_dict("records"),
+                min_records=10,
+                required_fields=["sector_name", "change_percent"],
+            )
+            if not gate.get("ok"):
+                attempts.append(
+                    {
+                        "source": src,
+                        "ok": False,
+                        "message": f"quality gate failed: {gate.get('reason', 'unknown')}",
+                    }
+                )
+                continue
+            attempts.append({"source": src, "ok": True, "message": "ok"})
+            return _finalize_sector_response(df, sector_type, src, cache_key, attempts=attempts)
         except Exception as e:  # noqa: BLE001
             logger.warning("概念板块数据源 %s 失败: %s", src, e)
-    try:
-        df = _fetch_sector_from_em_concept_clist()
-        if df is not None and not df.empty:
-            return _build_sector_response_from_df(df, sector_type, data_source="em_concept_clist")
-    except Exception as e:  # noqa: BLE001
-        logger.warning("东财概念 push2 列表失败: %s", e)
-    try:
-        df = _fetch_sector_data_from_eastmoney(sector_type="concept", period=period)
-        if df is not None and not df.empty:
-            return _build_sector_response_from_df(df, sector_type, data_source="em_concept_jsonp")
-    except Exception as e:  # noqa: BLE001
-        logger.error("东财概念 JSONP 失败: %s", e)
-    return {
-        "status": "error",
-        "error": "概念板块：新浪/东财均无有效数据",
-        "sector_type": sector_type,
-        "date": datetime.now().strftime("%Y-%m-%d"),
-    }
+            attempts.append({"source": src, "ok": False, "message": str(e)[:160]})
+    return normalize_contract(
+        success=False,
+        payload={
+            "status": "error",
+            "error": "概念板块：新浪/东财均无有效数据",
+            "sector_type": sector_type,
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "explanation": "所有上游链路均失败且缓存未命中，按规则不使用估计值。",
+        },
+        source="sector",
+        attempts=attempts,
+        used_fallback=False,
+        data_quality="partial",
+        cache_hit=False,
+        error_code="UPSTREAM_FETCH_FAILED",
+        error_message="all concept upstream sources failed",
+    )
 
 
 def _fetch_sector_from_ths_industry_summary() -> Optional[pd.DataFrame]:
@@ -469,6 +536,77 @@ def _build_sector_response_from_df(
     if data_source:
         out["data_source"] = data_source
     return out
+
+
+def _finalize_sector_response(
+    df: pd.DataFrame,
+    sector_type: str,
+    source: str,
+    cache_key: str,
+    *,
+    attempts: Optional[List[Dict[str, Any]]] = None,
+) -> Dict:
+    base = _build_sector_response_from_df(df, sector_type, data_source=source)
+    top5_codes = [str(x.get("sector_name", "")) for x in base.get("leaders", {}).get("top_gainers", [])][:5]
+    history = _TOP5_HISTORY.setdefault(sector_type, [])
+    previous = history[-1] if history else []
+    overlap = len(set(previous) & set(top5_codes)) if previous else 0
+    rotation_speed_score = round(1 - overlap / 5, 4) if previous else 0.0
+    history.append(top5_codes)
+    if len(history) > 20:
+        history.pop(0)
+    main_line = top5_codes[0] if top5_codes else None
+    gate = quality_gate_records(
+        df.to_dict("records"),
+        min_records=30 if sector_type == "industry" else 10,
+        required_fields=["sector_name", "change_percent"],
+    )
+    fallback_route = [a["source"] for a in (attempts or []) if not a.get("ok")]
+    as_of = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    top_gainers = base.get("leaders", {}).get("top_gainers", [])
+    top_losers = base.get("leaders", {}).get("top_losers", [])
+    total_count = int(base.get("summary", {}).get("total_sectors", 0))
+    base["rotation_speed_score"] = rotation_speed_score
+    base["main_line"] = main_line
+    base["strong_days"] = {name: 1 for name in top5_codes}
+    base["quality_gate"] = gate
+    base["fallback_route"] = fallback_route
+    base["as_of"] = as_of
+    base["sectors"] = {
+        sector_type: {
+            "top_gainers": top_gainers,
+            "top_losers": top_losers,
+            "total_count": total_count,
+            "quality_gate_passed": bool(gate.get("ok")),
+        }
+    }
+    base["derived"] = {
+        "rotation_speed_score": rotation_speed_score,
+        "main_line": main_line,
+        "signal": base.get("signal", {}),
+    }
+    base["metric_semantics"] = {
+        "change_percent": "板块涨跌幅截面（百分比）",
+        "net_inflow": "板块净流入（上游可得时）",
+        "rotation_speed_score": "Top5 与上一快照重合率转换得分（1-重合占比）",
+        "strong_days": "板块连续处于 Top5 的天数（当前版本为会话级）",
+    }
+    base["explanation"] = {
+        "main_line_reason": f"主线板块为 {main_line}，基于当期涨跌幅 Top1 识别。" if main_line else "暂无可识别主线。",
+        "rotation_speed_interpretation": f"Top5 相对上一快照重合 {overlap}/5，轮动得分 {rotation_speed_score}。",
+        "signal_reason": "信号由市场强弱、轮动速度与风格因子共同生成。",
+    }
+    ttl = infer_ttl_seconds("sector")
+    cache_set(cache_key, base, ttl)
+    return normalize_contract(
+        success=True,
+        payload=base,
+        source=source,
+        attempts=attempts or [{"source": source, "ok": True, "message": "ok"}],
+        used_fallback=bool(fallback_route),
+        data_quality="fresh" if gate.get("ok") else "partial",
+        cache_hit=False,
+    )
 
 
 def _calculate_rotation_speed(df: pd.DataFrame) -> str:

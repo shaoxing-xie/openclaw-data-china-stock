@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026-04-18 (sentiment tools optimization closure)
+
+### Major: four sentiment tools finalized
+
+- 完成四个情绪类工具优化收口并统一工程规范：
+  - `tool_fetch_limit_up_stocks`
+  - `tool_fetch_a_share_fund_flow`
+  - `tool_fetch_northbound_flow`
+  - `tool_fetch_sector_data`
+- 四工具统一接入响应契约与质量字段：`success/source/fallback_route/attempts/data_quality/cache_hit/error_code/explanation`。
+- 明确并落地硬约束：**无上游且无缓存时直接失败，不生成估计值；缓存仅来自历史成功拉取结果**。
+
+### Source chains and fallback policy
+
+- `limit_up_pool` 链路定版：`akshare.stock_zt_pool_em -> stock_zt_pool_previous_em -> stock_zt_pool_strong_em -> stock_zt_pool_sub_new_em -> cache`。
+- `fund_flow` 链路定版：THS-first（`stock_fund_flow_individual/concept/industry/big_deal`），东财兜底改为可选且默认关闭。
+- `northbound` 链路定版：`tushare.moneyflow_hsgt -> eastmoney.legacy_hsgt -> cache`，移除 `stock_hsgt_fund_flow_summary_em`。
+- `sector_snapshot` 链路定版：
+  - industry: `ths_industry_summary -> sina.stock_sector_spot(新浪行业/行业) -> em_push2_industry -> akshare_industry_name_em -> cache`
+  - concept: `sina.stock_sector_spot(概念) -> em_concept_clist -> em_concept_jsonp -> cache`
+
+### Documentation and quality gates
+
+- 新增/完善情绪文档体系：`docs/sentiment/api_contract.md`、`dq_policy.md`、`error_codes.md`、`akshare_interface_inventory.md`、`akshare_interface_validation_report.md`、`sentiment_data_object_call_chains.md`、`examples.md`。
+- 更新项目主文档 `README.md` 与采集子文档 `plugins/data_collection/README.md`，同步四工具最终链路、硬约束和第三方接入入口。
+- `tool_fetch_sector_data` 收口为链路内质量闸门执行（行业 `>=30`、概念 `>=10`、字段校验、null_ratio 校验），不通过即降级。
+
 ## 2026-04-17 (v0.5.1)
 
 ### Release preparation

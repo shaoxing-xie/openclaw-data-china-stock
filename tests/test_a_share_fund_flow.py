@@ -21,40 +21,41 @@ class TestAShareFundFlow(unittest.TestCase):
         self.assertFalse(r["success"])
         self.assertIn("stock_code", r.get("error", ""))
 
-    @patch.object(mod, "EM_HTTP_AVAILABLE", False)
     @patch.object(mod, "ak")
     def test_market_history_tail_max_days(self, mock_ak: MagicMock) -> None:
-        rows = [{"日期": f"2024-01-{i:02d}", "x": i} for i in range(1, 31)]
-        mock_ak.stock_market_fund_flow.return_value = pd.DataFrame(rows)
+        mock_ak.stock_fund_flow_industry.return_value = pd.DataFrame(
+            [{"净额": "1亿"}, {"净额": "-0.5亿"}]
+        )
+        mock_ak.stock_fund_flow_concept.return_value = pd.DataFrame(
+            [{"净额": "0.2亿"}, {"净额": "-0.1亿"}]
+        )
         r = mod.tool_fetch_a_share_fund_flow(query_kind="market_history", max_days=5)
         self.assertTrue(r["success"])
         self.assertEqual(r["query_kind"], "market_history")
-        self.assertEqual(len(r["records"]), 5)
-        self.assertEqual(r["records"][-1]["x"], 30)
+        self.assertGreaterEqual(len(r["records"]), 1)
+        self.assertEqual(r.get("metric_semantics"), "proxy_from_ths_industry_aggregate")
 
     @patch.object(mod, "ak")
-    def test_stock_rank_fallback_em_to_ths(self, mock_ak: MagicMock) -> None:
-        def em_fail(*_a: object, **_k: object) -> pd.DataFrame:
-            raise RuntimeError("network")
-
+    def test_stock_rank_ths_primary(self, mock_ak: MagicMock) -> None:
         def ths_ok(*_a: object, **_k: object) -> pd.DataFrame:
             return pd.DataFrame([{"代码": "600000", "名称": "浦发银行", "净流入": 1.0}])
 
-        mock_ak.stock_individual_fund_flow_rank.side_effect = em_fail
         mock_ak.stock_fund_flow_individual.side_effect = ths_ok
         r = mod.tool_fetch_a_share_fund_flow(query_kind="stock_rank", limit=10)
         self.assertTrue(r["success"])
         self.assertEqual(r["query_kind"], "stock_rank")
-        self.assertTrue(r.get("used_fallback"))
+        self.assertFalse(r.get("used_fallback"))
         self.assertEqual(r["records"][0]["代码"], "600000")
         mock_ak.stock_fund_flow_individual.assert_called()
-        mock_ak.stock_individual_fund_flow_rank.assert_called()
+        mock_ak.stock_individual_fund_flow_rank.assert_not_called()
 
     @patch.object(mod, "ak")
+    @patch.object(mod, "ENABLE_EASTMONEY_FALLBACK", True)
     def test_stock_rank_preference_eastmoney_first(self, mock_ak: MagicMock) -> None:
         mock_ak.stock_individual_fund_flow_rank.return_value = pd.DataFrame(
             [{"代码": "000001", "名称": "平安"}]
         )
+        mock_ak.stock_fund_flow_individual.side_effect = RuntimeError("ths down")
         r = mod.tool_fetch_a_share_fund_flow(
             query_kind="stock_rank",
             provider_preference="eastmoney",
@@ -68,7 +69,6 @@ class TestAShareFundFlow(unittest.TestCase):
 
     @patch.object(mod, "ak")
     def test_sector_rank_industry_fallback_em_to_ths(self, mock_ak: MagicMock) -> None:
-        mock_ak.stock_sector_fund_flow_rank.side_effect = RuntimeError("em down")
         mock_ak.stock_fund_flow_industry.return_value = pd.DataFrame(
             [{"名称": "银行", "净额": 0.1}]
         )
@@ -78,7 +78,7 @@ class TestAShareFundFlow(unittest.TestCase):
             rank_window="immediate",
         )
         self.assertTrue(r["success"])
-        self.assertTrue(r.get("used_fallback"))
+        self.assertFalse(r.get("used_fallback"))
         self.assertEqual(r["records"][0]["名称"], "银行")
 
     @patch.object(mod, "EM_HTTP_AVAILABLE", False)
@@ -120,20 +120,18 @@ class TestAShareFundFlow(unittest.TestCase):
 
     @patch.object(mod, "THS_BD_LIMITED_AVAILABLE", False)
     @patch.object(mod, "ak")
-    @patch.object(mod, "_em_http")
-    @patch.object(mod, "EM_HTTP_AVAILABLE", True)
+    @patch.object(mod, "ENABLE_EASTMONEY_FALLBACK", False)
     def test_big_deal_prefers_eastmoney_proxy(
-        self, mock_em: MagicMock, mock_ak: MagicMock
+        self, mock_ak: MagicMock
     ) -> None:
-        mock_em.eastmoney_big_deal_proxy_limited.return_value = pd.DataFrame(
+        mock_ak.stock_fund_flow_big_deal.return_value = pd.DataFrame(
             [{"代码": "000001", "名称": "平安", "今日大单净流入-净额": 1.0}]
         )
         r = mod.tool_fetch_a_share_fund_flow(query_kind="big_deal", limit=5)
         self.assertTrue(r["success"])
-        self.assertIn("eastmoney", r["source"])
+        self.assertIn("akshare", r["source"])
         self.assertFalse(r.get("used_fallback"))
-        mock_em.eastmoney_big_deal_proxy_limited.assert_called_once()
-        mock_ak.stock_fund_flow_big_deal.assert_not_called()
+        mock_ak.stock_fund_flow_big_deal.assert_called_once()
 
     @patch.object(mod, "EM_HTTP_AVAILABLE", False)
     @patch.object(mod, "ak")

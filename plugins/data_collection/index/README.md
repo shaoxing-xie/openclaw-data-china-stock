@@ -18,7 +18,7 @@
 
 ### 3. fetch_global.py - 全球指数数据
 
-**功能说明**：获取全球主要指数的实时行情数据
+**功能说明**：获取全球主要指数**最新快照**（yfinance / FMP / 新浪可配置顺序）
 
 **使用方法**：见 [data_collection/README.md](../README.md#3-indexfetch_globalpy---全球指数数据)
 

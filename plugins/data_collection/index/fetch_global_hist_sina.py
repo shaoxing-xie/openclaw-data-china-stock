@@ -4,11 +4,16 @@ Backward-compatible global index history tool.
 This module restores the legacy import path:
 `plugins.data_collection.index.fetch_global_hist_sina`
 which is still referenced by assistant-side workflows.
+
+数据源顺序（与 ``fetch_global.fetch_global_index_spot`` 中 yfinance/FMP/新浪 链一致，历史侧另行组合）：
+
+- **美股日线（DJI/SPX/IXIC）**：``yfinance`` → ``ak.index_global_hist_em``（东财）；不试新浪 hist（cons 无美股键）。
+- **其它指数**：``ak.index_global_hist_sina``（新浪键名）→ 失败则返回错误（不走 yfinance）。
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import akshare as ak
 import pandas as pd
@@ -26,12 +31,17 @@ _GLOBAL_NAME_TO_SYMBOL = {
 }
 
 # Common ticker aliases observed in assistant workflows.
+# 与 yfinance 符号对齐；新浪 global_hist 入参需用 index_global_sina_symbol_map 中的中文名（见 akshare.index.cons）。
 _SYMBOL_ALIASES = {
     "^DJI": "DJI",
     "^IXIC": "IXIC",
     "^GSPC": "SPX",
     "^N225": "N225",
     "^HSI": "HSI",
+    "^FTSE": "UKX",
+    "^GDAXI": "DAX",
+    "^STOXX50E": "SX5E",
+    "^KS11": "KOSPI",
     "DJIA": "DJI",
     "NASDAQ": "IXIC",
     "SP500": "SPX",
@@ -43,9 +53,15 @@ _AK_ALT_SYMBOLS = {
     "SPX": ["SPX", "标普500指数", "标普500"],
     "N225": ["N225", "日经225指数", "日经225"],
     "HSI": ["HSI", "恒生指数"],
-    "UKX": ["UKX", "英国富时100指数"],
-    "DAX": ["DAX", "德国DAX"],
+    # 英国富时100：英国富时100指数 为新浪表内稳定名称
+    "UKX": ["英国富时100指数", "UKX"],
+    # 德国DAX：必须用 cons 中全名「德国DAX 30种股价指数」，旧候选「德国DAX指数」会报不存在
+    "DAX": ["德国DAX 30种股价指数", "DAX", "德国DAX指数", "德国DAX"],
     "CAC": ["CAC", "法国CAC40"],
+    # 欧洲斯托克50：欧洲Stoxx50指数（新浪）；SX5E 为内部代码备选
+    "SX5E": ["欧洲Stoxx50指数", "SX5E"],
+    # 韩国综合：首尔综合指数（新浪 map）；与 ^KS11 / EM 代码 KS11 对齐
+    "KOSPI": ["首尔综合指数", "KOSPI"],
 }
 
 
@@ -77,6 +93,75 @@ def _normalize_symbol(symbol: str) -> str:
     raise KeyError(f"unknown global index symbol: {symbol}")
 
 
+# 新浪 cons.index_global_sina_symbol_map 不含美股三大；hist 需走东财或 yfinance。
+_EM_HIST_NAME_BY_NORMALIZED: Dict[str, str] = {
+    "DJI": "道琼斯",
+    "SPX": "标普500",
+    "IXIC": "纳斯达克",
+}
+_YF_SYMBOL_BY_NORMALIZED: Dict[str, str] = {
+    "DJI": "^DJI",
+    "SPX": "^GSPC",
+    "IXIC": "^IXIC",
+}
+
+
+def _em_hist_df_to_canonical(df: pd.DataFrame) -> pd.DataFrame:
+    """东财 index_global_hist_em 列为中文，转为与新浪 hist 一致的 date/close 等。"""
+    if df is None or df.empty:
+        return df
+    col_date = next((c for c in ("日期", "date") if c in df.columns), None)
+    col_close = next((c for c in ("最新价", "close", "Close") if c in df.columns), None)
+    if not col_date or not col_close:
+        return pd.DataFrame()
+    out = pd.DataFrame(
+        {
+            "date": pd.to_datetime(df[col_date], errors="coerce").dt.strftime("%Y-%m-%d"),
+            "open": pd.to_numeric(df.get("今开", df.get("open")), errors="coerce"),
+            "high": pd.to_numeric(df.get("最高", df.get("high")), errors="coerce"),
+            "low": pd.to_numeric(df.get("最低", df.get("low")), errors="coerce"),
+            "close": pd.to_numeric(df[col_close], errors="coerce"),
+            "volume": pd.to_numeric(df.get("volume"), errors="coerce"),
+        }
+    )
+    out = out.dropna(subset=["close"])
+    return out.sort_values("date")
+
+
+def _yf_hist_to_records(normalized: str) -> Optional[List[Dict[str, Any]]]:
+    sym = _YF_SYMBOL_BY_NORMALIZED.get(normalized)
+    if not sym:
+        return None
+    try:
+        import yfinance as yf
+    except ImportError:
+        return None
+    try:
+        t = yf.Ticker(sym)
+        hist = t.history(period="12d")
+    except Exception:
+        return None
+    if hist is None or hist.empty or len(hist) < 2:
+        return None
+    out: list[dict[str, Any]] = []
+    for idx in hist.index:
+        try:
+            close = float(hist["Close"].loc[idx])
+        except Exception:
+            continue
+        out.append(
+            {
+                "date": str(idx.date()),
+                "open": float(hist["Open"].loc[idx]) if "Open" in hist.columns else None,
+                "high": float(hist["High"].loc[idx]) if "High" in hist.columns else None,
+                "low": float(hist["Low"].loc[idx]) if "Low" in hist.columns else None,
+                "close": close,
+                "volume": float(hist["Volume"].loc[idx]) if "Volume" in hist.columns else None,
+            }
+        )
+    return out if len(out) >= 2 else None
+
+
 def _to_records(df: pd.DataFrame) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     if df is None or df.empty:
@@ -102,11 +187,61 @@ def fetch_global_index_hist_sina(symbol: str, limit: int = 60) -> Dict[str, Any]
     Args:
         symbol: Global index symbol or known Chinese name.
         limit: Number of latest rows to return.
+
+    数据源优先级（手工/逻辑约定）：
+
+    - **美股日线 DJI/SPX/IXIC**：与 ``fetch_global.py`` 现货一致——**yfinance → 东财**；新浪 cons 无美股键，不试新浪 hist。
+    - **其它地区**：**新浪 global_hist →（仅上述三标的才会再走东财/yfinance，已由上方分支处理）**。
     """
     normalized = _normalize_symbol(symbol)
     rows = max(1, int(limit or 1))
+    last_error: Optional[str] = None
 
-    # Keep old behavior preference: try index_global_hist_sina first.
+    # ---------- 美股三大：日线优先 yfinance，其次东财（与现货主源 yfinance 对齐） ----------
+    if normalized in _EM_HIST_NAME_BY_NORMALIZED:
+        yf_recs = _yf_hist_to_records(normalized)
+        if yf_recs and len(yf_recs) >= 2:
+            tail = yf_recs[-rows:] if len(yf_recs) > rows else yf_recs
+            return {
+                "success": True,
+                "count": len(tail),
+                "data": tail,
+                "source": "yfinance",
+            }
+        df_us: Optional[pd.DataFrame] = None
+        source_us = "akshare.index_global_hist_em"
+        if hasattr(ak, "index_global_hist_em"):
+            try:
+                raw_em = ak.index_global_hist_em(symbol=_EM_HIST_NAME_BY_NORMALIZED[normalized])
+                df_us = _em_hist_df_to_canonical(raw_em)
+                if isinstance(df_us, pd.DataFrame) and not df_us.empty:
+                    source_us = "akshare.index_global_hist_em"
+            except Exception as exc:  # noqa: BLE001
+                last_error = str(exc)
+                df_us = None
+        if isinstance(df_us, pd.DataFrame) and not df_us.empty:
+            if "date" in df_us.columns:
+                df_us = df_us.sort_values("date")
+            if len(df_us) > rows:
+                df_us = df_us.tail(rows)
+            recs = _to_records(df_us)
+            return {
+                "success": True,
+                "count": len(recs),
+                "data": recs,
+                "source": source_us,
+            }
+        result: Dict[str, Any] = {
+            "success": False,
+            "count": 0,
+            "data": [],
+            "source": "yfinance",
+        }
+        if last_error:
+            result["message"] = last_error
+        return result
+
+    # ---------- 非美股：优先新浪 global_hist ----------
     if hasattr(ak, "index_global_hist_sina"):
         api = ak.index_global_hist_sina
         source = "akshare.index_global_hist_sina"
@@ -118,7 +253,6 @@ def fetch_global_index_hist_sina(symbol: str, limit: int = 60) -> Dict[str, Any]
 
     candidates = _AK_ALT_SYMBOLS.get(normalized, [normalized])
     df: Optional[pd.DataFrame] = None
-    last_error: Optional[str] = None
     for cand in candidates:
         try:
             maybe_df = api(symbol=cand)

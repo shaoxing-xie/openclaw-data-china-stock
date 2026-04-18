@@ -8,10 +8,12 @@ A 股资金流向统一查询（东财 / 同花顺等多源链）。
 from __future__ import annotations
 
 import concurrent.futures
+import json
 import logging
 import math
 import os
 from contextlib import nullcontext
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import pandas as pd
@@ -39,6 +41,14 @@ except Exception:  # noqa: BLE001
 from plugins.data_collection.utils.provider_preference import (
     normalize_provider_preference,
     reorder_provider_chain,
+)
+from plugins.data_collection.sentiment_common import (
+    build_cache_key,
+    cache_get,
+    cache_set,
+    infer_ttl_seconds,
+    normalize_contract,
+    quality_gate_records,
 )
 
 try:
@@ -120,6 +130,17 @@ MAX_DAYS_DEFAULT = 120
 MAX_DAYS_CAP = 150
 LOOKBACK_DEFAULT = 20
 LOOKBACK_MAX = 120
+THS_STOCK_RANK_TIMEOUT_SEC = float(os.environ.get("THS_STOCK_RANK_TIMEOUT_SEC", "120"))
+THS_BIG_DEAL_TIMEOUT_SEC = float(os.environ.get("THS_BIG_DEAL_TIMEOUT_SEC", "180"))
+ENABLE_EASTMONEY_FALLBACK = str(os.environ.get("FUND_FLOW_ENABLE_EASTMONEY_FALLBACK", "false")).lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+THS_MARKET_PROXY_HISTORY_FILE = (
+    Path(__file__).resolve().parents[2] / "data" / "cache" / "fund_flow" / "ths_market_proxy_history.json"
+)
 
 
 def _clip_limit(n: int) -> int:
@@ -196,6 +217,7 @@ def _call_df_with_timeout(fn: Callable[[], pd.DataFrame], timeout_sec: float) ->
 def _run_chain(
     preference: str,
     tagged: List[Tuple[str, Callable[[], pd.DataFrame]]],
+    timeout_sec_override: Optional[float] = None,
 ) -> Tuple[Optional[pd.DataFrame], str, List[Dict[str, Any]], bool]:
     """
     按 provider 偏好重排后依次尝试；返回 (df, winning_tag, attempts, used_fallback)。
@@ -204,7 +226,7 @@ def _run_chain(
     attempts: List[Dict[str, Any]] = []
     used_fallback = False
     first_tag = ordered[0][0] if ordered else None
-    timeout_sec = _attempt_timeout_sec()
+    timeout_sec = timeout_sec_override if timeout_sec_override is not None else _attempt_timeout_sec()
     ctx = without_proxy_env() if PROXY_ENV_AVAILABLE else nullcontext()
     with ctx:
         for tag, fn in ordered[:ATTEMPTS_CAP]:
@@ -267,6 +289,36 @@ def tool_fetch_a_share_fund_flow(
         BIG_DEAL_THS_MAX_PAGES：`big_deal` 走同花顺 HTML 分页时的最大页数（默认 30，上限 500）。
     """
     qk = (query_kind or "").strip().lower()
+    cache_key = build_cache_key(
+        "a_share_fund_flow_tool",
+        {
+            "qk": qk,
+            "provider_preference": provider_preference,
+            "limit": limit,
+            "max_days": max_days,
+            "sector_type": sector_type,
+            "rank_window": rank_window,
+            "stock_code": stock_code,
+            "market": market,
+            "lookback_days": lookback_days,
+            "sector_name": sector_name,
+            "drill_kind": drill_kind,
+            "include_hist": include_hist,
+            "main_force_symbol": main_force_symbol,
+            "big_deal_stock_code": big_deal_stock_code,
+        },
+    )
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return normalize_contract(
+            success=True,
+            payload=cached,
+            source=cached.get("source", "cache"),
+            attempts=[{"source": "cache", "ok": True, "message": "hit"}],
+            used_fallback=True,
+            data_quality="cached",
+            cache_hit=True,
+        )
     if qk not in QUERY_KINDS:
         return {
             "success": False,
@@ -285,21 +337,131 @@ def tool_fetch_a_share_fund_flow(
     }
 
     if qk == "market_history":
-        return _qk_market_history(max_days, pref, params_echo)
-    if qk == "sector_rank":
-        return _qk_sector_rank(sector_type, rank_window, pref, lim, params_echo)
-    if qk == "stock_rank":
-        return _qk_stock_rank(rank_window, pref, lim, params_echo)
-    if qk == "stock_history":
-        return _qk_stock_history(stock_code, market, lookback_days, params_echo)
-    if qk == "big_deal":
-        return _qk_big_deal(big_deal_stock_code or stock_code, lim, params_echo)
-    if qk == "main_force_rank":
-        return _qk_main_force(main_force_symbol, lim, params_echo)
-    if qk == "sector_drill":
-        return _qk_sector_drill(sector_name, rank_window, drill_kind, include_hist, lim, params_echo)
+        raw = _qk_market_history(max_days, pref, params_echo)
+    elif qk == "sector_rank":
+        raw = _qk_sector_rank(sector_type, rank_window, pref, lim, params_echo)
+    elif qk == "stock_rank":
+        raw = _qk_stock_rank(rank_window, pref, lim, params_echo)
+    elif qk == "stock_history":
+        raw = _qk_stock_history(stock_code, market, lookback_days, params_echo)
+    elif qk == "big_deal":
+        raw = _qk_big_deal(big_deal_stock_code or stock_code, lim, params_echo)
+    elif qk == "main_force_rank":
+        raw = _qk_main_force(main_force_symbol, lim, params_echo)
+    elif qk == "sector_drill":
+        raw = _qk_sector_drill(sector_name, rank_window, drill_kind, include_hist, lim, params_echo)
+    else:
+        raw = {"success": False, "error": "unreachable"}
 
-    return {"success": False, "error": "unreachable"}
+    wrapped = _post_process_fund_flow(raw, qk)
+    if wrapped.get("success"):
+        cache_set(cache_key, wrapped, infer_ttl_seconds("fund_flow"))
+    return wrapped
+
+
+def _safe_float(v: Any) -> float:
+    try:
+        if isinstance(v, str):
+            s = v.strip().replace(",", "")
+            if s.endswith("亿"):
+                return float(s[:-1]) * 1e8
+            if s.endswith("万"):
+                return float(s[:-1]) * 1e4
+            if s.endswith("%"):
+                return float(s[:-1])
+            return float(s)
+        return float(v)
+    except Exception:
+        return 0.0
+
+
+def _pick_first_col(df: pd.DataFrame, candidates: List[str]) -> Optional[str]:
+    for c in candidates:
+        if c in df.columns:
+            return c
+    return None
+
+
+def _load_proxy_history() -> List[Dict[str, Any]]:
+    try:
+        if not THS_MARKET_PROXY_HISTORY_FILE.exists():
+            return []
+        return json.loads(THS_MARKET_PROXY_HISTORY_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+
+def _save_proxy_history(records: List[Dict[str, Any]]) -> None:
+    try:
+        THS_MARKET_PROXY_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+        THS_MARKET_PROXY_HISTORY_FILE.write_text(json.dumps(records[-240:], ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        logger.warning("failed to persist THS market proxy history")
+
+
+def _post_process_fund_flow(raw: Dict[str, Any], qk: str) -> Dict[str, Any]:
+    if not raw.get("success"):
+        return normalize_contract(
+            success=False,
+            payload={**raw, "explanation": "资金流查询失败，请根据 error_message 排查上游源。"},
+            source=raw.get("source", f"a_share_fund_flow.{qk}"),
+            attempts=raw.get("attempts", []),
+            used_fallback=bool(raw.get("used_fallback")),
+            data_quality="partial",
+            cache_hit=False,
+            error_code="UPSTREAM_FETCH_FAILED",
+            error_message=raw.get("error") or raw.get("message"),
+        )
+
+    payload = dict(raw)
+    records = payload.get("records") or []
+    gate = quality_gate_records(records, min_records=1, max_null_ratio=0.85)
+    payload["quality_gate"] = gate
+    if qk == "market_history":
+        totals: List[float] = []
+        for r in records:
+            cands = [
+                r.get("proxy_total_net"),
+                r.get("主力净流入"),
+                r.get("主力净流入-净额"),
+                r.get("净流入"),
+                r.get("今日主力净流入-净额"),
+            ]
+            v = 0.0
+            for c in cands:
+                if c is not None:
+                    v = _safe_float(c)
+                    break
+            totals.append(v)
+        payload["cumulative"] = {
+            "3d": round(sum(totals[-3:]), 2) if totals else None,
+            "5d": round(sum(totals[-5:]), 2) if totals else None,
+            "10d": round(sum(totals[-10:]), 2) if totals else None,
+        }
+        payload["flow_score"] = round((_safe_float(payload["cumulative"]["5d"] or 0) / 100.0), 2)
+        if "metric_semantics" not in payload:
+            payload["metric_semantics"] = "proxy_from_ths_industry_aggregate"
+    if qk in ("sector_rank", "stock_rank"):
+        top_vals: List[float] = []
+        all_vals: List[float] = []
+        for r in records:
+            for k, v in r.items():
+                if "净流入" in str(k):
+                    fv = abs(_safe_float(v))
+                    all_vals.append(fv)
+                    break
+        top_vals = sorted(all_vals, reverse=True)[:5]
+        payload["concentration_ratio"] = round(sum(top_vals) / sum(all_vals), 4) if all_vals and sum(all_vals) else 0.0
+    payload["explanation"] = payload.get("explanation") or "统一输出质量字段，并补充资金趋势/集中度指标。"
+    return normalize_contract(
+        success=True,
+        payload=payload,
+        source=payload.get("source", f"a_share_fund_flow.{qk}"),
+        attempts=payload.get("attempts", []),
+        used_fallback=bool(payload.get("used_fallback")),
+        data_quality="fresh" if gate.get("ok") else "partial",
+        cache_hit=False,
+    )
 
 
 def _qk_market_history(
@@ -311,58 +473,102 @@ def _qk_market_history(
     md = max(1, min(md, MAX_DAYS_CAP))
     params_echo["max_days"] = md
 
-    ctx = without_proxy_env() if PROXY_ENV_AVAILABLE else nullcontext()
-    df: Optional[pd.DataFrame] = None
-    src = "akshare.stock_market_fund_flow"
     attempts: List[Dict[str, Any]] = []
+    ctx = without_proxy_env() if PROXY_ENV_AVAILABLE else nullcontext()
     with ctx:
-        if EM_HTTP_AVAILABLE and _em_http is not None:
-            try:
-                df = _em_http.stock_market_fund_flow_direct()
-                attempts.append({"source": "eastmoney_http", "ok": bool(df is not None and not df.empty), "message": "ok"})
-                if df is not None and not df.empty:
-                    src = "eastmoney_http.push2his"
-            except Exception as e:  # noqa: BLE001
-                attempts.append({"source": "eastmoney_http", "ok": False, "message": str(e)[:220]})
-        if df is None or getattr(df, "empty", True):
-            try:
-                df = ak.stock_market_fund_flow()
-                attempts.append({"source": "akshare", "ok": bool(df is not None and not df.empty), "message": "ok"})
-                src = "akshare.stock_market_fund_flow"
-            except Exception as e:  # noqa: BLE001
-                attempts.append({"source": "akshare", "ok": False, "message": str(e)[:220]})
-                return {
-                    "success": False,
-                    "query_kind": "market_history",
-                    "error": str(e),
-                    "provider_preference": preference,
-                    "params_echo": params_echo,
-                    "attempts": attempts[:ATTEMPTS_CAP],
-                    "message": "东财大盘资金流向接口失败",
-                }
-    if df is None or df.empty:
+        try:
+            df_ind = ak.stock_fund_flow_industry(symbol="即时")
+            attempts.append({"source": "ths_industry", "ok": bool(df_ind is not None and not df_ind.empty), "message": "ok"})
+            df_con = ak.stock_fund_flow_concept(symbol="即时")
+            attempts.append({"source": "ths_concept", "ok": bool(df_con is not None and not df_con.empty), "message": "ok"})
+        except Exception as e:  # noqa: BLE001
+            attempts.append({"source": "ths_proxy", "ok": False, "message": str(e)[:220]})
+            if ENABLE_EASTMONEY_FALLBACK and EM_HTTP_AVAILABLE and _em_http is not None:
+                try:
+                    df = _em_http.stock_market_fund_flow_direct()
+                    attempts.append({"source": "eastmoney_http", "ok": bool(df is not None and not df.empty), "message": "ok"})
+                    if df is not None and not df.empty:
+                        df2 = df.tail(md)
+                        records, columns = _df_to_records(df2, None)
+                        return {
+                            "success": True,
+                            "query_kind": "market_history",
+                            "provider_preference": preference,
+                            "params_echo": params_echo,
+                            "source": "eastmoney_http.push2his",
+                            "used_fallback": True,
+                            "attempts": attempts[:ATTEMPTS_CAP],
+                            "columns": columns,
+                            "records": records,
+                            "as_of_date": _as_of_date_from_df(df2),
+                        }
+                except Exception as ee:  # noqa: BLE001
+                    attempts.append({"source": "eastmoney_http", "ok": False, "message": str(ee)[:220]})
+            return {
+                "success": False,
+                "query_kind": "market_history",
+                "provider_preference": preference,
+                "params_echo": params_echo,
+                "attempts": attempts[:ATTEMPTS_CAP],
+                "message": "THS 市场资金代理构建失败",
+            }
+
+    if df_ind is None or df_ind.empty:
         return {
             "success": False,
             "query_kind": "market_history",
             "provider_preference": preference,
             "params_echo": params_echo,
             "attempts": attempts[:ATTEMPTS_CAP],
-            "message": "empty dataframe",
+            "message": "ths industry empty",
         }
-    df2 = df.tail(md)
-    records, columns = _df_to_records(df2, None)
-    used_fb = src == "akshare.stock_market_fund_flow"
+    ind_net_col = _pick_first_col(df_ind, ["净额", "主力净流入", "净流入"])
+    if ind_net_col is None:
+        return {
+            "success": False,
+            "query_kind": "market_history",
+            "provider_preference": preference,
+            "params_echo": params_echo,
+            "attempts": attempts[:ATTEMPTS_CAP],
+            "message": "ths industry missing net column",
+        }
+    ind_nets = [_safe_float(v) for v in df_ind[ind_net_col].tolist()]
+    con_nets: List[float] = []
+    if df_con is not None and not df_con.empty:
+        con_net_col = _pick_first_col(df_con, ["净额", "主力净流入", "净流入"])
+        if con_net_col:
+            con_nets = [_safe_float(v) for v in df_con[con_net_col].tolist()]
+    total_net = float(sum(ind_nets) + sum(con_nets))
+    positive_count = sum(1 for x in ind_nets if x > 0)
+    positive_ratio = (positive_count / len(ind_nets)) if ind_nets else 0.0
+    today = pd.Timestamp.now().strftime("%Y-%m-%d")
+    history = _load_proxy_history()
+    history = [x for x in history if x.get("date") != today]
+    history.append(
+        {
+            "date": today,
+            "proxy_total_net": total_net,
+            "proxy_positive_ratio": round(positive_ratio, 4),
+            "metric_semantics": "proxy_from_ths_industry_aggregate",
+            "source": "ths",
+        }
+    )
+    history = sorted(history, key=lambda x: x.get("date", ""))[-md:]
+    _save_proxy_history(history)
+    records = history
+    columns = sorted({k for row in records for k in row.keys()}) if records else []
     return {
         "success": True,
         "query_kind": "market_history",
         "provider_preference": preference,
         "params_echo": params_echo,
-        "source": src,
-        "used_fallback": used_fb,
+        "source": "ths_proxy.market_aggregate",
+        "used_fallback": False,
         "attempts": attempts[:ATTEMPTS_CAP],
         "columns": columns,
         "records": records,
-        "as_of_date": _as_of_date_from_df(df2),
+        "as_of_date": today,
+        "metric_semantics": "proxy_from_ths_industry_aggregate",
     }
 
 
@@ -395,13 +601,13 @@ def _qk_sector_rank(
     def em_rank() -> pd.DataFrame:
         return ak.stock_sector_fund_flow_rank(indicator=em_indicator, sector_type=em_sector)
 
-    tagged: List[Tuple[str, Callable[[], pd.DataFrame]]] = [
-        ("eastmoney", em_rank),
-    ]
+    tagged: List[Tuple[str, Callable[[], pd.DataFrame]]] = []
     if st == "industry":
         tagged.append(("ths", lambda: ak.stock_fund_flow_industry(symbol=ths_sym)))
     elif st == "concept":
         tagged.append(("ths", lambda: ak.stock_fund_flow_concept(symbol=ths_sym)))
+    if st == "region" or ENABLE_EASTMONEY_FALLBACK:
+        tagged.append(("eastmoney", em_rank))
     # region: 仅东财
 
     tagged = reorder_provider_chain(preference, tagged)
@@ -427,6 +633,7 @@ def _qk_sector_rank(
         "columns": columns,
         "records": records,
         "as_of_date": _as_of_date_from_df(df),
+        "metric_semantics": "direct_from_ths" if win == "ths" else "direct_from_eastmoney",
     }
 
 
@@ -442,15 +649,15 @@ def _qk_stock_rank(
 
     ths_sym = RANK_WINDOW_THS[rw]
     em_ind = RANK_WINDOW_EM_INDICATOR[rw]
-    params_echo.update({"rank_window": rw, "stock_rank_note": "默认先东财个股排名（分页大，已设链超时）；再同花顺"})
+    params_echo.update({"rank_window": rw, "stock_rank_note": "THS-first；THS 大表慢，已启用分场景超时"})
 
-    # 先东财（与全市场行情工具一致，优先可复现的东财源），再同花顺；ths 在 auto 下易慢，由 _run_chain 超时切换
     tagged: List[Tuple[str, Callable[[], pd.DataFrame]]] = [
-        ("eastmoney", lambda: ak.stock_individual_fund_flow_rank(indicator=em_ind)),
         ("ths", lambda: ak.stock_fund_flow_individual(symbol=ths_sym)),
     ]
+    if ENABLE_EASTMONEY_FALLBACK:
+        tagged.append(("eastmoney", lambda: ak.stock_individual_fund_flow_rank(indicator=em_ind)))
     tagged = reorder_provider_chain(preference, tagged)
-    df, win, attempts, used_fb = _run_chain(preference, tagged)
+    df, win, attempts, used_fb = _run_chain(preference, tagged, timeout_sec_override=THS_STOCK_RANK_TIMEOUT_SEC)
     if df is None or df.empty:
         return {
             "success": False,
@@ -472,6 +679,7 @@ def _qk_stock_rank(
         "columns": columns,
         "records": records,
         "as_of_date": _as_of_date_from_df(df),
+        "metric_semantics": "direct_from_ths" if win == "ths" else "direct_from_eastmoney",
     }
 
 
@@ -582,44 +790,24 @@ def _qk_big_deal(
 
     ctx = without_proxy_env() if PROXY_ENV_AVAILABLE else nullcontext()
     with ctx:
-        if EM_HTTP_AVAILABLE and _em_http is not None:
+        if THS_BD_LIMITED_AVAILABLE and _ths_bd is not None:
             try:
-                df = _em_http.eastmoney_big_deal_proxy_limited(want)
+                df = _call_df_with_timeout(lambda: _ths_bd.ths_big_deal_limited(max_rows=want), THS_BIG_DEAL_TIMEOUT_SEC)
                 ok = df is not None and not getattr(df, "empty", True)
-                attempts.append(
-                    {"source": "eastmoney_http_big_order_rank", "ok": ok, "message": "f72_sort_proxy"}
-                )
+                attempts.append({"source": "ths_ddzz_limited", "ok": ok, "message": "paged"})
                 if ok:
-                    src = "eastmoney_http.big_order_net_inflow_rank"
-                    interpretation = (
-                        "东财全A股按今日大单净流入(f72)排序的快照；字段不同于同花顺逐笔大单（成交时间/额等）"
-                    )
+                    src = "ths_html.ddzz_limited"
+                    interpretation = "同花顺大单追踪 HTML 分页（受 BIG_DEAL_THS_MAX_PAGES 约束）"
+            except concurrent.futures.TimeoutError:
+                attempts.append({"source": "ths_ddzz_limited", "ok": False, "message": f"timeout>{THS_BIG_DEAL_TIMEOUT_SEC:.0f}s"})
             except Exception as e:  # noqa: BLE001
                 attempts.append(
-                    {
-                        "source": "eastmoney_http_big_order_rank",
-                        "ok": False,
-                        "message": str(e)[:220],
-                    }
+                    {"source": "ths_ddzz_limited", "ok": False, "message": str(e)[:220]}
                 )
 
         if df is None or getattr(df, "empty", True):
-            if THS_BD_LIMITED_AVAILABLE and _ths_bd is not None:
-                try:
-                    df = _ths_bd.ths_big_deal_limited(max_rows=want)
-                    ok = df is not None and not getattr(df, "empty", True)
-                    attempts.append({"source": "ths_ddzz_limited", "ok": ok, "message": "paged"})
-                    if ok:
-                        src = "ths_html.ddzz_limited"
-                        interpretation = "同花顺大单追踪 HTML 分页（受 BIG_DEAL_THS_MAX_PAGES 约束）"
-                except Exception as e:  # noqa: BLE001
-                    attempts.append(
-                        {"source": "ths_ddzz_limited", "ok": False, "message": str(e)[:220]}
-                    )
-
-        if df is None or getattr(df, "empty", True):
             try:
-                df = ak.stock_fund_flow_big_deal()
+                df = _call_df_with_timeout(lambda: ak.stock_fund_flow_big_deal(), THS_BIG_DEAL_TIMEOUT_SEC)
                 ok = df is not None and not getattr(df, "empty", True)
                 attempts.append({"source": "akshare_ths_full", "ok": ok, "message": "full_pages"})
                 if ok:
@@ -634,6 +822,16 @@ def _qk_big_deal(
                     "params_echo": params_echo,
                     "attempts": attempts[:ATTEMPTS_CAP],
                 }
+        if (df is None or getattr(df, "empty", True)) and ENABLE_EASTMONEY_FALLBACK and EM_HTTP_AVAILABLE and _em_http is not None:
+            try:
+                df = _em_http.eastmoney_big_deal_proxy_limited(want)
+                ok = df is not None and not getattr(df, "empty", True)
+                attempts.append({"source": "eastmoney_http_big_order_rank", "ok": ok, "message": "f72_sort_proxy"})
+                if ok:
+                    src = "eastmoney_http.big_order_net_inflow_rank"
+                    interpretation = "东财全A股按今日大单净流入(f72)排序快照（可选兜底）"
+            except Exception as e:  # noqa: BLE001
+                attempts.append({"source": "eastmoney_http_big_order_rank", "ok": False, "message": str(e)[:220]})
 
     if df is None or df.empty:
         return {
@@ -660,6 +858,7 @@ def _qk_big_deal(
         "attempts": attempts[:ATTEMPTS_CAP],
         "columns": columns,
         "records": records,
+        "metric_semantics": "direct_from_ths" if "ths" in src else "proxy_from_eastmoney",
     }
 
 
