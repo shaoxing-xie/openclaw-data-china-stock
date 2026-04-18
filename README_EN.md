@@ -54,7 +54,7 @@ Details: `plugins/data_collection/technical_indicators/README.md`
 ### 4) Agent-oriented integration
 
 - unified routing through `config/tools_manifest.json` and `tool_runner.py`
-- fast developer registration via `scripts/register_openclaw_dev.py`
+- fast developer registration via `scripts/register_openclaw_dev.py` (symlinks skills such as `market-scanner`, `market-sentinel`, `fund-flow-analyst`, and others into the workspace)
 - deterministic Python interpreter resolution for cross-environment deployment
 
 ## Quick start
@@ -102,6 +102,7 @@ This script updates `~/.openclaw/openclaw.json` in append-only mode and exposes 
 - installation and deployment: `INSTALL.md`
 - indicator details: `plugins/data_collection/technical_indicators/README.md`
 - macro skill: `skills/china-macro-analyst/SKILL.md`
+- market sentiment aggregate skill: `skills/market-sentinel/SKILL.md`
 - macro API / errors / data quality:
   - `docs/macro/api_contract.md`
   - `docs/macro/error_codes.md`

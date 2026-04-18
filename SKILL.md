@@ -20,6 +20,7 @@ This plugin provides a ClawHub/OpenClaw compatible toolset for collecting A-shar
 - `skills/china-macro-analyst/SKILL.md`
 - `skills/technical-analyst/SKILL.md`
 - `skills/market-scanner/SKILL.md`
+- `skills/market-sentinel/SKILL.md`
 - `skills/fund-flow-analyst/SKILL.md`
 - `skills/strategy-backtester/SKILL.md` (MVP mode)
 - `skills/fundamental-analyst/SKILL.md`

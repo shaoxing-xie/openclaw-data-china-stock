@@ -77,6 +77,7 @@ python -m pytest -q tests/test_manifest_tool_map_parity.py tests/test_tool_runne
   - `china-macro-analyst`
   - `technical-analyst`
   - `market-scanner`
+  - `market-sentinel`
   - `fund-flow-analyst`
   - `strategy-backtester`
   - `fundamental-analyst`

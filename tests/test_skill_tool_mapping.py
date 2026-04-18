@@ -20,6 +20,12 @@ SKILL_TOOL_RULES = {
         "tool_fetch_northbound_flow",
         "tool_fetch_limit_up_stocks",
     ],
+    "market-sentinel": [
+        "tool_fetch_limit_up_stocks",
+        "tool_fetch_a_share_fund_flow",
+        "tool_fetch_northbound_flow",
+        "tool_fetch_sector_data",
+    ],
     "fund-flow-analyst": [
         "tool_fetch_a_share_fund_flow",
         "tool_fetch_northbound_flow",

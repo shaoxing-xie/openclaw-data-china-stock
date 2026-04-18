@@ -18,6 +18,7 @@ SKILL_NAMES = [
     "china-macro-analyst",
     "technical-analyst",
     "market-scanner",
+    "market-sentinel",
     "fund-flow-analyst",
     "strategy-backtester",
     "fundamental-analyst",

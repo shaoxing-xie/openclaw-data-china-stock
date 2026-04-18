@@ -69,6 +69,7 @@
 
 - 技术分析：`skills/technical-analyst/SKILL.md`
 - 市场扫描：`skills/market-scanner/SKILL.md`
+- 市场情绪综合：`skills/market-sentinel/SKILL.md`（四情绪工具聚合）
 - 资金流分析：`skills/fund-flow-analyst/SKILL.md`
 - 策略回测（MVP）：`skills/strategy-backtester/SKILL.md`
 - 基本面分析：`skills/fundamental-analyst/SKILL.md`
@@ -152,6 +153,20 @@ python -m pip install -r requirements-optional.txt
 
 该脚本会以“仅追加、不破坏原配置”的方式更新 `~/.openclaw/openclaw.json`，并将相关 skill 暴露到 OpenClaw workspace。
 
+### 情绪工具相关环境变量（可选）
+
+四个情绪工具中，`tool_fetch_northbound_flow` 优先使用 `tushare.moneyflow_hsgt`。  
+如需启用该主链路，请配置：
+
+```bash
+export TUSHARE_TOKEN="your_tushare_token"
+```
+
+说明：
+- 未配置 `TUSHARE_TOKEN` 时，工具会自动降级到 `eastmoney.legacy_hsgt -> cache`
+- `moneyflow_hsgt` 为日频汇总口径，适合日终趋势分析（非盘中实时明细）
+- 建议在服务进程环境或 `~/.openclaw/.env` 中统一注入该变量
+
 ## 常见使用示例（Agent 指令）
 
 - “请拉取 510300 最近一年日线并计算 RSI、MACD、布林带。”
@@ -170,6 +185,7 @@ python -m pip install -r requirements-optional.txt
 - Skill 总规范：`skills/SKILL_CONTRACT.md`
 - 技术分析 Skill：`skills/technical-analyst/SKILL.md`
 - 市场扫描 Skill：`skills/market-scanner/SKILL.md`
+- 市场情绪综合 Skill：`skills/market-sentinel/SKILL.md`
 - 资金流分析 Skill：`skills/fund-flow-analyst/SKILL.md`
 - 策略回测 Skill：`skills/strategy-backtester/SKILL.md`
 - 基本面分析 Skill：`skills/fundamental-analyst/SKILL.md`
@@ -179,6 +195,7 @@ python -m pip install -r requirements-optional.txt
   - `docs/macro/error_codes.md`
   - `docs/macro/dq_policy.md`
 - 版本发布记录：`CHANGELOG.md`
+- `v0.5.2` 发布纪要：`docs/release/v0.5.2.md`
 
 ## 兼容性与已知限制
 

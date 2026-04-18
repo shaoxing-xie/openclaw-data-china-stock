@@ -263,6 +263,8 @@ tools:
   scope: market_scanner
   recommended: true
   tool_group: market_structure
+  sentinel_bundle: true
+  skill_hint: market-sentinel
   parameters:
     type: object
     properties:
@@ -892,6 +894,8 @@ tools:
   scope: market_scanner
   recommended: true
   tool_group: market_sentiment
+  sentinel_bundle: true
+  skill_hint: market-sentinel
   parameters:
     type: object
     properties:
@@ -993,6 +997,8 @@ tools:
   scope: fund_flow_analyst
   recommended: true
   tool_group: primary_fund_flow
+  sentinel_bundle: true
+  skill_hint: market-sentinel
   parameters:
     type: object
     properties:
@@ -1014,6 +1020,8 @@ tools:
   scope: fund_flow_analyst
   recommended: true
   tool_group: primary_fund_flow
+  sentinel_bundle: true
+  skill_hint: market-sentinel
   parameters:
     type: object
     properties:

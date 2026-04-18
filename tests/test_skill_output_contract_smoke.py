@@ -29,6 +29,17 @@ EXPECTED_OUTPUT_KEYS = {
         "event_window",
         "data_freshness",
     ],
+    "market-sentinel": [
+        "overall_score",
+        "sentiment_stage",
+        "sub_scores",
+        "factor_attribution",
+        "data_completeness_ratio",
+        "action_bias",
+        "risk_counterevidence",
+        "confidence_band",
+        "degraded",
+    ],
     "fund-flow-analyst": [
         "market_flow",
         "northbound_flow",
