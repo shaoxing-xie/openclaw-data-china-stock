@@ -65,7 +65,15 @@
   - `docs/macro/error_codes.md`
   - `docs/macro/dq_policy.md`
 
-### 4) Skill 能力层（v0.5.0+）
+### 4) 多因子选股（A 股）
+
+- 工具：`tool_screen_equity_factors`（`plugins/analysis/equity_factor_screening.py`；manifest / `tool_runner` 已注册）
+- 批量：`tool_batch_fetch` 白名单含上述工具（`plugins/merged/tool_batch_fetch.py`）
+- 申万一级静态映射：`config/sw_industry_level1_mapping.json` ← `scripts/update_sw_industry_level1_mapping.py`
+- 契约与测试：`docs/schemas/tool_screen_equity_factors.schema.json`、`tests/test_tool_screen_equity_factors_contract.py`
+- 与 **etf-options-ai-assistant** 协同：夜盘收尾与熔断工具、规程 Skill `ota_equity_factor_screening_brief` 在该仓配置（见该仓 `config/tools_manifest.yaml`、`skills/ota-equity-factor-screening-brief/`）
+
+### 5) Skill 能力层（v0.5.0+）
 
 - 技术分析：`skills/technical-analyst/SKILL.md`
 - 市场扫描：`skills/market-scanner/SKILL.md`
@@ -76,7 +84,7 @@
 - 宏观分析（既有）：`skills/china-macro-analyst/SKILL.md`
 - 统一规范：`skills/SKILL_CONTRACT.md`
 
-### 5) 四个情绪工具（已完成优化收口）
+### 6) 四个情绪工具（已完成优化收口）
 
 - 覆盖工具：
   - `tool_fetch_limit_up_stocks`
@@ -107,7 +115,7 @@
   - `docs/sentiment/sentiment_data_object_call_chains.md`
   - `docs/sentiment/examples.md`
 
-### 6) 面向 OpenClaw Agent 的工程化集成
+### 7) 面向 OpenClaw Agent 的工程化集成
 
 - `config/tools_manifest.json` + `tool_runner.py` 统一路由
 - 支持开发态快速注册：`scripts/register_openclaw_dev.py`

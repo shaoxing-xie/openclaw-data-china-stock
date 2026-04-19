@@ -52,6 +52,8 @@ PY
 export OPENCLAW_DATA_CHINA_STOCK_PYTHON="/abs/path/to/.venv/bin/python"
 ```
 
+若 Gateway 由 **systemd --user** 启动且已 `EnvironmentFile=%h/.openclaw/.env`（常见），请把上述变量**写入 `~/.openclaw/.env`**，确保插件子进程与 CLI 使用同一解释器。
+
 ## 6. 最小验收
 
 ```bash

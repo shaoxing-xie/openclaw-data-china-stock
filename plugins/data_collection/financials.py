@@ -1,7 +1,7 @@
 """
 财务数据采集模块（A 股 PE/PB/ROE/股息率等）
 
-- 封装 AkShare 东方财富财务主要指标接口，供 quantitative_screening 的 valuation 因子使用
+- 封装 AkShare 东方财富财务主要指标接口，供估值类因子 / 研究流程复用（如 `tool_fetch_stock_financials` 与扩展筛选）
 - 入参：symbols（支持逗号分隔或列表）, 可选 lookback_report_count
 - 出参：financials: [{ symbol, pe_ttm, pb, roe, dividend_yield, report_date, success, error? }]
 """

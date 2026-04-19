@@ -31,6 +31,14 @@ This plugin provides a ClawHub/OpenClaw compatible toolset for collecting A-shar
 - **Compatibility wrappers**: `tool_fetch_macro_*` (21 tools; kept for backward compatibility)
 - **Skill**: `skills/china-macro-analyst/SKILL.md` (institutional 4-section narrative template; rules in `macro_config.yaml`)
 
+### Multi-factor equity screening (A-share)
+
+- **`tool_screen_equity_factors`**: Single entry for oscillation/trend templates (e.g. `reversal_5d`, `fund_flow_3d`, `sector_momentum_5d`) over `hs300|zz500|zz1000|a_share|custom`; returns `quality_score`, `degraded`, `config_hash`, optional `sw_mapping` stats. Implemented in `plugins/analysis/equity_factor_screening.py`; registered in `tool_runner.py` / `config/tools_manifest.yaml` (+ JSON). JSON Schema: `docs/schemas/tool_screen_equity_factors.schema.json`.
+- **`tool_batch_fetch`**: Batch runner includes `tool_screen_equity_factors` (see `plugins/merged/tool_batch_fetch.py` whitelist).
+- **申万一级映射**：`config/sw_industry_level1_mapping.json`，由 `scripts/update_sw_industry_level1_mapping.py` 生成（默认乐咕乐股 `sw_index_first_info` + `sw_index_third_cons`；可选 `SW_MAP_USE_EM_SPOT=1` 走东财快照）。消费侧：`plugins/analysis/sw_industry_mapping.py`。
+
+助手侧夜盘落盘、质量门禁与熔断工具（`tool_finalize_screening_nightly` / `tool_set_screening_emergency_pause`）在 **etf-options-ai-assistant** 仓库注册；规程 Skill **`ota_equity_factor_screening_brief`** 仅在该助手仓维护并同步到 Gateway。
+
 ### Fund-flow tools (pick one job, do not duplicate)
 
 - **`tool_capital_flow`**: Single-stock **summary** for workflows that need `flow_judgement` / `risk_flags` style outputs (e.g. limit-up strategies).

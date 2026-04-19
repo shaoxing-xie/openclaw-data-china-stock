@@ -51,7 +51,15 @@ Details: `plugins/data_collection/technical_indicators/README.md`
   - `docs/macro/error_codes.md`
   - `docs/macro/dq_policy.md`
 
-### 4) Agent-oriented integration
+### 4) Multi-factor equity screening (A-share)
+
+- tool: `tool_screen_equity_factors` (`plugins/analysis/equity_factor_screening.py`; registered in manifest / `tool_runner`)
+- batch: `tool_batch_fetch` whitelist includes this tool (`plugins/merged/tool_batch_fetch.py`)
+- Shenwan L1 static mapping: `config/sw_industry_level1_mapping.json` ← `scripts/update_sw_industry_level1_mapping.py`
+- schema / tests: `docs/schemas/tool_screen_equity_factors.schema.json`, `tests/test_tool_screen_equity_factors_contract.py`
+- companion in **etf-options-ai-assistant**: nightly finalize / emergency pause tools and Skill `ota_equity_factor_screening_brief` (see that repo)
+
+### 5) Agent-oriented integration
 
 - unified routing through `config/tools_manifest.json` and `tool_runner.py`
 - fast developer registration via `scripts/register_openclaw_dev.py` (symlinks skills such as `market-scanner`, `market-sentinel`, `fund-flow-analyst`, and others into the workspace)

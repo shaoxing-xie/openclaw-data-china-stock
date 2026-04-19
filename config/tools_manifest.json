@@ -986,6 +986,77 @@
       }
     },
     {
+      "id": "tool_screen_equity_factors",
+      "label": "多因子选股（因子引擎）",
+      "description": "震荡/趋势模板下，对 hs300|zz500|zz1000|a_share|custom 股票池组合 reversal_5d、fund_flow_3d、sector_momentum_5d 等因子并输出 TopN；含 quality_score、degraded、config_hash。内部仅调用既有日线/资金流/板块工具。",
+      "description_short": "多因子选股单入口（含质量分与审计哈希）。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "universe": {
+            "type": "string",
+            "description": "hs300 | zz500 | zz1000 | a_share | custom",
+            "default": "hs300"
+          },
+          "filters": {
+            "type": "object",
+            "description": "预留硬过滤（市值、流动性等）"
+          },
+          "factors": {
+            "type": "array",
+            "description": "因子 id 列表，默认三项全开",
+            "items": {
+              "type": "string"
+            }
+          },
+          "neutralize": {
+            "type": "array",
+            "description": "industry | market_cap（数据不足时会 degraded 说明）",
+            "items": {
+              "type": "string"
+            }
+          },
+          "top_n": {
+            "type": "number",
+            "default": 10
+          },
+          "regime_hint": {
+            "type": "string",
+            "description": "oscillation | trend（影响因子权重模板）",
+            "default": "oscillation"
+          },
+          "screening_date": {
+            "type": "string",
+            "description": "预留对齐日 YYYY-MM-DD"
+          },
+          "custom_symbols": {
+            "type": "string",
+            "description": "universe=custom 时逗号分隔六码",
+            "default": ""
+          },
+          "max_universe_size": {
+            "type": "number",
+            "description": "股票池上限（性能保护）",
+            "default": 50
+          },
+          "lookback_calendar_days": {
+            "type": "number",
+            "description": "拉取日线自然日窗",
+            "default": 40
+          },
+          "max_concurrent_fetch": {
+            "type": "number",
+            "description": "拉日线并发上限，0 表示用环境变量或默认 4",
+            "default": 0
+          },
+          "provider_preference": {
+            "type": "string",
+            "default": "auto"
+          }
+        }
+      }
+    },
+    {
       "id": "tool_fetch_stock_historical",
       "label": "获取个股历史K线",
       "description": "获取A股个股历史K线数据（日线/周线/月线）。",
@@ -1401,7 +1472,7 @@
     {
       "id": "tool_fetch_a_share_fund_flow",
       "label": "A股资金流向（统一）",
-      "description": "A 股大盘/板块/个股资金流向（AkShare 东方财富、同花顺等多源链；原始数据非投资建议，口径以数据源页面为准）。query_kind：market_history（大盘历史）| sector_rank（板块排名）| stock_rank（个股排名）| stock_history（单股序列）| big_deal（大单：东财 push2 限页「大单净流入」排序快照→同花顺 HTML 限页（BIG_DEAL_THS_MAX_PAGES）→AkShare 全量；非逐笔、字段可能不同）| main_force_rank（主力净流入排名）| sector_drill（板块成分资金流+可选历史）。",
+      "description": "A 股大盘/板块/个股资金流向（AkShare 东方财富、同花顺等多源链；原始数据非投资建议，口径以数据源页面为准）。 query_kind：market_history（大盘历史）| sector_rank（板块排名）| stock_rank（个股排名）| stock_history（单股序列）| big_deal（大单：东财 push2 限页「大单净流入」排序快照→同花顺 HTML 限页（BIG_DEAL_THS_MAX_PAGES）→AkShare 全量；非逐笔、字段可能不同）| main_force_rank（主力净流入排名）| sector_drill（板块成分资金流+可选历史）。",
       "description_short": "A股资金流向统一接口（东财/同花顺）。",
       "scope": "fund_flow_analyst",
       "recommended": true,
@@ -1489,7 +1560,7 @@
     {
       "id": "tool_fetch_a_share_technical_screener",
       "label": "A股技术选股排名表",
-      "description": "同花顺数据中心「技术选股」排名表（AkShare stock_rank_*_ths）：创新高/新低、连续涨跌、持续放量缩量、上下突破均线、量价齐升/跌、险资举牌等。非本地 MACD/RSI 计算（请用 tool_stock_data_fetcher 或 tool_calculate_technical_indicators）。原始数据非投资建议。",
+      "description": "同花顺数据中心「技术选股」排名表（AkShare stock_rank_*_ths）：创新高/新低、连续涨跌、持续放量缩量、 上下突破均线、量价齐升/跌、险资举牌等。非本地 MACD/RSI 计算（请用 tool_stock_data_fetcher 或 tool_calculate_technical_indicators）。原始数据非投资建议。",
       "description_short": "A股技术选股表（同花顺 THS）。",
       "parameters": {
         "type": "object",
@@ -1700,7 +1771,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_macro_cx_services_pmi",
@@ -1710,7 +1784,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_macro_enterprise_boom",
@@ -1720,7 +1797,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_macro_lpi",
@@ -1730,7 +1810,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_macro_cpi",
@@ -1740,7 +1823,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_macro_ppi",
@@ -1750,7 +1836,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_macro_m2",
@@ -1760,7 +1849,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_macro_social_financing",
@@ -1770,7 +1862,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_macro_new_credit",
@@ -1780,7 +1875,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_macro_lpr",
@@ -1790,7 +1888,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_macro_fx_reserves",
@@ -1800,7 +1901,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_macro_gdp",
@@ -1810,7 +1914,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_macro_industrial_value",
@@ -1820,7 +1927,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_macro_fixed_asset",
@@ -1830,7 +1940,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_macro_leverage",
@@ -1840,7 +1953,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_macro_exports_imports",
@@ -1850,7 +1966,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_macro_trade_balance",
@@ -1860,7 +1979,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_macro_exports_yoy",
@@ -1870,7 +1992,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_macro_unemployment",
@@ -1880,7 +2005,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_macro_tax_receipts",
@@ -1890,7 +2018,10 @@
       "scope": "china_macro_analyst",
       "recommended": false,
       "tool_group": "macro_compat",
-      "parameters": { "type": "object", "properties": {} }
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "id": "tool_fetch_market_data",

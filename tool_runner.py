@@ -572,9 +572,9 @@ TOOL_MAP: Dict[str, ToolSpec] = {
         module_path="plugins.data_collection.stock.reference_p1",
         function_name="tool_fetch_stock_research_news",
     ),
-    "tool_quantitative_screening": ToolSpec(
-        module_path="analysis.quantitative_screening",
-        function_name="tool_quantitative_screening",
+    "tool_screen_equity_factors": ToolSpec(
+        module_path="plugins.analysis.equity_factor_screening",
+        function_name="tool_screen_equity_factors",
     ),
     # 回测
     "tool_backtest_limit_up_pullback": ToolSpec(

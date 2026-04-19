@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openclaw.local/schemas/tool_screen_equity_factors.json",
+  "title": "tool_screen_equity_factors response (success)",
+  "type": "object",
+  "required": ["success", "quality_score", "degraded", "config_hash", "elapsed_ms", "plugin_version"],
+  "properties": {
+    "success": { "type": "boolean" },
+    "message": { "type": "string" },
+    "data": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "object",
+        "required": ["symbol", "score", "factors"],
+        "properties": {
+          "symbol": { "type": "string" },
+          "score": { "type": "number" },
+          "factors": { "type": "object" },
+          "industry": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "quality_score": { "type": "number" },
+    "degraded": { "type": "boolean" },
+    "config_hash": { "type": "string", "minLength": 8 },
+    "elapsed_ms": { "type": "integer", "minimum": 0 },
+    "plugin_version": { "type": "string" },
+    "universe_source": { "type": "string" },
+    "weights_effective": { "type": "object" },
+    "sw_mapping": {
+      "type": "object",
+      "properties": {
+        "mapping_version": { "type": ["string", "null"] },
+        "coverage": { "type": "number" },
+        "hit": { "type": "integer" },
+        "total": { "type": "integer" }
+      }
+    }
+  }
+}

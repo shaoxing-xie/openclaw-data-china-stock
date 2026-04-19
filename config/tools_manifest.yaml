@@ -708,6 +708,61 @@ tools:
         default: 200
     required:
     - content_kind
+- id: tool_screen_equity_factors
+  label: 多因子选股（因子引擎）
+  description: >-
+    震荡/趋势模板下，对 hs300|zz500|zz1000|a_share|custom 股票池组合 reversal_5d、fund_flow_3d、sector_momentum_5d
+    等因子并输出 TopN；含 quality_score、degraded、config_hash。内部仅调用既有日线/资金流/板块工具。
+  description_short: 多因子选股单入口（含质量分与审计哈希）。
+  parameters:
+    type: object
+    properties:
+      universe:
+        type: string
+        description: hs300 | zz500 | zz1000 | a_share | custom
+        default: hs300
+      filters:
+        type: object
+        description: 预留硬过滤（市值、流动性等）
+      factors:
+        type: array
+        description: 因子 id 列表，默认三项全开
+        items:
+          type: string
+      neutralize:
+        type: array
+        description: industry | market_cap（数据不足时会 degraded 说明）
+        items:
+          type: string
+      top_n:
+        type: number
+        default: 10
+      regime_hint:
+        type: string
+        description: oscillation | trend（影响因子权重模板）
+        default: oscillation
+      screening_date:
+        type: string
+        description: 预留对齐日 YYYY-MM-DD
+      custom_symbols:
+        type: string
+        description: universe=custom 时逗号分隔六码
+        default: ''
+      max_universe_size:
+        type: number
+        description: 股票池上限（性能保护）
+        default: 50
+      lookback_calendar_days:
+        type: number
+        description: 拉取日线自然日窗
+        default: 40
+      max_concurrent_fetch:
+        type: number
+        description: 拉日线并发上限，0 表示用环境变量或默认 4
+        default: 0
+      provider_preference:
+        type: string
+        default: auto
 - id: tool_fetch_stock_historical
   label: 获取个股历史K线
   description: 获取A股个股历史K线数据（日线/周线/月线）。
