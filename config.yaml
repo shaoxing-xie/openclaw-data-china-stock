@@ -60,9 +60,12 @@ system:
       - '20261006'
       - '20261007'
 
-# src/data_cache.py：enabled=false 时不写入 parquet（仍可读已有缓存）；与 SKILL/README 默认语义一致
 data_cache:
   enabled: false
+
+duckdb_cache:
+  enabled: false
+  threads: 16
 
 tushare:
   enabled: true
