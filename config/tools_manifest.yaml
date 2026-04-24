@@ -1588,3 +1588,109 @@ tools:
     required:
     - asset_code
     - asset_type
+- id: tool_fetch_sector_constituents
+  label: 获取行业成分股
+  description: 行业/概念成分股查询；优先 AkShare *_cons_em，失败可退化为指数成分近似并标记 degraded。
+  description_short: 行业成分股（含降级语义）。
+  parameters:
+    type: object
+    properties:
+      sector_code:
+        type: string
+        description: 行业/概念名称（或指数代码用于代理）
+      sector_type:
+        type: string
+        description: industry|concept
+        default: industry
+      trade_date:
+        type: string
+        description: YYYY-MM-DD
+    required:
+    - sector_code
+- id: tool_calculate_sector_breadth
+  label: 计算行业宽度
+  description: 基于行业截面计算上涨占比、宽度信号，输出 L2 特征契约。
+  description_short: 行业宽度特征。
+  parameters:
+    type: object
+    properties:
+      sector_code:
+        type: string
+      lookback_days:
+        type: number
+        default: 20
+      trade_date:
+        type: string
+    required:
+    - sector_code
+- id: tool_calculate_sector_leadership
+  label: 计算领涨集中度（代理版）
+  description: 领涨股代理法（THS 领涨股 + A股主数据映射 + 个股历史动量）输出领导力特征。
+  description_short: 领涨代理特征。
+  parameters:
+    type: object
+    properties:
+      sector_code:
+        type: string
+      lookback_days:
+        type: number
+        default: 60
+      top_k:
+        type: number
+        default: 5
+      weighting_scheme:
+        type: string
+        default: equal
+      trade_date:
+        type: string
+    required:
+    - sector_code
+- id: tool_fetch_etf_share
+  label: 获取ETF份额序列
+  description: ETF份额时序（SSE/SZSE），输出 L1 原始契约与质量语义。
+  description_short: ETF份额时序。
+  parameters:
+    type: object
+    properties:
+      etf_code:
+        type: string
+      lookback_days:
+        type: number
+        default: 60
+      trade_date:
+        type: string
+    required:
+    - etf_code
+- id: tool_calculate_share_trend
+  label: 计算ETF份额趋势
+  description: 基于份额序列计算 5/20/60 日变化、一致性和背离标签，输出 L2 特征契约。
+  description_short: 份额趋势特征。
+  parameters:
+    type: object
+    properties:
+      etf_code:
+        type: string
+      windows:
+        type: array
+        items:
+          type: number
+      trade_date:
+        type: string
+    required:
+    - etf_code
+- id: tool_calculate_sector_momentum_v2
+  label: 计算行业动量v2
+  description: 行业涨跌幅与资金成分融合得分，输出 L2 动量增强特征。
+  description_short: 行业动量v2。
+  parameters:
+    type: object
+    properties:
+      sector_code:
+        type: string
+      lookback_days:
+        type: number
+        default: 20
+      trade_date:
+        type: string
+    required:
+    - sector_code

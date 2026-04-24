@@ -137,7 +137,9 @@ def _resolve_universe(
     max_universe_size: int,
 ) -> Tuple[List[str], str, Optional[str]]:
     u = (universe or "hs300").strip().lower()
-    cap = max(5, min(int(max_universe_size or 50), 200))
+    raw_size = int(max_universe_size or 0)
+    full_index_mode = u in INDEX_UNIVERSE and raw_size <= 0
+    cap = max(5, min(raw_size if raw_size > 0 else 50, 1000))
 
     from plugins.data_collection.stock.fundamentals_extended import tool_fetch_a_share_universe
     from plugins.data_collection.stock.reference_p1 import tool_fetch_index_constituents
@@ -152,7 +154,8 @@ def _resolve_universe(
 
     if u in INDEX_UNIVERSE:
         idx = INDEX_UNIVERSE[u]
-        r = tool_fetch_index_constituents(idx, max_rows=cap)
+        fetch_rows = 1000 if full_index_mode else cap
+        r = tool_fetch_index_constituents(idx, max_rows=fetch_rows)
         if not r.get("success") or not r.get("data"):
             return [], f"index:{idx}", r.get("message") or "成份股获取失败"
         rows = r["data"] if isinstance(r["data"], list) else []
@@ -163,7 +166,8 @@ def _resolve_universe(
                 nc = _norm_code_6(str(c))
                 if len(nc) == 6 and nc.isdigit():
                     codes.append(nc)
-        codes = codes[:cap]
+        if not full_index_mode:
+            codes = codes[:cap]
         return codes, f"index_constituents:{idx}", None if codes else "成份股列表为空"
 
     if u in ("a_share", "ashare", "all_a"):
@@ -191,7 +195,7 @@ def tool_screen_equity_factors(
     regime_hint: str = "oscillation",
     screening_date: Optional[str] = None,
     custom_symbols: str = "",
-    max_universe_size: int = 50,
+    max_universe_size: int = 0,
     lookback_calendar_days: int = 40,
     max_concurrent_fetch: int = 0,
     provider_preference: str = "auto",

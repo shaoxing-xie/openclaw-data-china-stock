@@ -29,6 +29,18 @@ _BATCH_IMPORTS = {
         "tool_calculate_technical_indicators",
     ),
     "tool_screen_equity_factors": ("plugins.analysis.equity_factor_screening", "tool_screen_equity_factors"),
+    "tool_fetch_a_share_technical_screener": (
+        "plugins.data_collection.a_share_technical_screener",
+        "tool_fetch_a_share_technical_screener",
+    ),
+    "tool_fetch_etf_share": ("plugins.analysis.etf_share", "tool_fetch_etf_share"),
+    "tool_calculate_share_trend": ("plugins.analysis.etf_share", "tool_calculate_share_trend"),
+    "tool_calculate_sector_breadth": ("plugins.analysis.sector_breadth", "tool_calculate_sector_breadth"),
+    "tool_calculate_sector_leadership": ("plugins.analysis.sector_leadership", "tool_calculate_sector_leadership"),
+    "tool_calculate_sector_momentum_v2": (
+        "plugins.analysis.sector_momentum_v2",
+        "tool_calculate_sector_momentum_v2",
+    ),
 }
 
 

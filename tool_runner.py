@@ -279,8 +279,32 @@ TOOL_MAP: Dict[str, ToolSpec] = {
         function_name="tool_detect_market_regime",
     ),
     "tool_etf_rotation_research": ToolSpec(
-        module_path="analysis.etf_rotation_research",
+        module_path="plugins.analysis.etf_rotation_research",
         function_name="tool_etf_rotation_research",
+    ),
+    "tool_fetch_sector_constituents": ToolSpec(
+        module_path="plugins.analysis.sector_constituents",
+        function_name="tool_fetch_sector_constituents",
+    ),
+    "tool_calculate_sector_breadth": ToolSpec(
+        module_path="plugins.analysis.sector_breadth",
+        function_name="tool_calculate_sector_breadth",
+    ),
+    "tool_calculate_sector_leadership": ToolSpec(
+        module_path="plugins.analysis.sector_leadership",
+        function_name="tool_calculate_sector_leadership",
+    ),
+    "tool_fetch_etf_share": ToolSpec(
+        module_path="plugins.analysis.etf_share",
+        function_name="tool_fetch_etf_share",
+    ),
+    "tool_calculate_share_trend": ToolSpec(
+        module_path="plugins.analysis.etf_share",
+        function_name="tool_calculate_share_trend",
+    ),
+    "tool_calculate_sector_momentum_v2": ToolSpec(
+        module_path="plugins.analysis.sector_momentum_v2",
+        function_name="tool_calculate_sector_momentum_v2",
     ),
     "tool_strategy_research": ToolSpec(
         module_path="analysis.strategy_research",
