@@ -51,27 +51,16 @@ _load_dotenv_for_tools()
 
 def _apply_market_data_proxy_policy() -> None:
     """
-    统一代理策略（默认开启）：
-    - 许多 AkShare 东财链路（*_em）在代理环境下会偶发失败（ProxyError/RemoteDisconnected）。
-    - 在独立插件场景下，默认对工具进程关闭代理变量，减少“交互式可用、工具内失败”的抖动。
+    统一代理策略总闸（兼容开关）：
+    - 代理决策由 plugins.utils.proxy_env + config.yaml(network.proxy) 按 source 控制。
+    - 这里不再默认清理全局代理环境变量，避免影响非 market-data 调用与并发行为。
 
     控制方式：
-    - OPENCLAW_DISABLE_PROXY_FOR_MARKET_DATA=0/false/off/no  -> 不清理代理变量
-    - 其他值或未设置 -> 清理代理变量并设置 NO_PROXY=*
+    - OPENCLAW_DISABLE_PROXY_FOR_MARKET_DATA=1/true/on/yes -> 由 source 策略层强制 bypass（见 proxy_env.resolve_proxy_policy）
+    - OPENCLAW_DISABLE_PROXY_FOR_MARKET_DATA=0/false/off/no 或未设置 -> 使用配置文件 network.proxy.* 策略
     """
-    raw = (os.getenv("OPENCLAW_DISABLE_PROXY_FOR_MARKET_DATA") or "1").strip().lower()
-    enabled = raw not in {"0", "false", "off", "no"}
-    if not enabled:
-        return
-
-    proxy_keys = (
-        "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY",
-        "http_proxy", "https_proxy", "all_proxy",
-    )
-    for k in proxy_keys:
-        os.environ.pop(k, None)
-    os.environ["NO_PROXY"] = "*"
-    os.environ["no_proxy"] = "*"
+    # No-op by design; kept for backward compatibility and discoverability.
+    return
 
 
 _apply_market_data_proxy_policy()

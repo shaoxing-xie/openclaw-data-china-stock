@@ -16,6 +16,8 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 import pytz
+from plugins.utils.proxy_env import proxy_context_for_source
+from plugins.utils.source_registry import with_source_meta
 
 
 def _project_root() -> Path:
@@ -26,6 +28,16 @@ def _cache_dir() -> Path:
     d = _project_root() / "data" / "cache"
     d.mkdir(parents=True, exist_ok=True)
     return d
+
+
+def _load_market_cfg() -> Dict[str, Any]:
+    try:
+        from src.config_loader import load_system_config
+
+        cfg = load_system_config(use_cache=True)
+        return cfg if isinstance(cfg, dict) else {}
+    except Exception:
+        return {}
 
 
 def _today_str() -> str:
@@ -95,14 +107,16 @@ def _tavily_search(
         }
         if topic == "news" and days:
             body["days"] = int(days)
-        resp = requests.post("https://api.tavily.com/search", json=body, timeout=18)
+        cfg = _load_market_cfg()
+        with proxy_context_for_source(cfg, "tavily"):
+            resp = requests.post("https://api.tavily.com/search", json=body, timeout=18)
         if not resp.ok:
             return {
                 "success": False,
                 "message": f"Tavily HTTP {resp.status_code}",
                 "data": None,
             }
-        return {"success": True, "data": resp.json()}
+        return with_source_meta({"success": True, "data": resp.json()}, source_raw="tavily", source_stage="primary")
     except Exception as e:
         return {"success": False, "message": str(e), "data": None}
 
@@ -303,8 +317,10 @@ def tool_fetch_macro_commodities(
 
     for sym, name in symbols:
         try:
-            t = yf.Ticker(sym)
-            hist = t.history(period="5d")
+            cfg = _load_market_cfg()
+            with proxy_context_for_source(cfg, "yfinance"):
+                t = yf.Ticker(sym)
+                hist = t.history(period="5d")
             if hist is None or hist.empty:
                 continue
             price = float(hist["Close"].iloc[-1])
@@ -316,6 +332,9 @@ def tool_fetch_macro_commodities(
                     "name": name,
                     "change_pct": round(chg_pct, 4) if chg_pct is not None else None,
                     "source": "yfinance",
+                    "source_id": "yfinance",
+                    "source_raw": "yfinance",
+                    "source_stage": "primary",
                 }
             )
         except Exception:
@@ -339,7 +358,11 @@ def tool_fetch_macro_commodities(
                     "numeric_unverified": True,
                 },
             }
-    return {"success": True, "message": "ok", "data": {"items": items, "source": "yfinance"}}
+    return with_source_meta(
+        {"success": True, "message": "ok", "data": {"items": items, "source": "yfinance"}},
+        source_raw="yfinance",
+        source_stage="primary",
+    )
 
 
 def tool_conditional_overnight_futures_digest(

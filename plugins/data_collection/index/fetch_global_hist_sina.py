@@ -17,6 +17,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import akshare as ak
 import pandas as pd
+from plugins.utils.proxy_env import proxy_context_for_source
+from plugins.utils.source_registry import with_source_meta
 
 # Common aliases used by assistant/report logic.
 _GLOBAL_NAME_TO_SYMBOL = {
@@ -106,6 +108,16 @@ _YF_SYMBOL_BY_NORMALIZED: Dict[str, str] = {
 }
 
 
+def _load_global_proxy_root_config() -> Dict[str, Any]:
+    try:
+        from src.config_loader import load_system_config
+
+        cfg = load_system_config(use_cache=True)
+        return cfg if isinstance(cfg, dict) else {}
+    except Exception:
+        return {}
+
+
 def _em_hist_df_to_canonical(df: pd.DataFrame) -> pd.DataFrame:
     """东财 index_global_hist_em 列为中文，转为与新浪 hist 一致的 date/close 等。"""
     if df is None or df.empty:
@@ -137,8 +149,10 @@ def _yf_hist_to_records(normalized: str) -> Optional[List[Dict[str, Any]]]:
     except ImportError:
         return None
     try:
-        t = yf.Ticker(sym)
-        hist = t.history(period="12d")
+        cfg = _load_global_proxy_root_config()
+        with proxy_context_for_source(cfg, "yfinance"):
+            t = yf.Ticker(sym)
+            hist = t.history(period="12d")
     except Exception:
         return None
     if hist is None or hist.empty or len(hist) < 2:
@@ -202,12 +216,12 @@ def fetch_global_index_hist_sina(symbol: str, limit: int = 60) -> Dict[str, Any]
         yf_recs = _yf_hist_to_records(normalized)
         if yf_recs and len(yf_recs) >= 2:
             tail = yf_recs[-rows:] if len(yf_recs) > rows else yf_recs
-            return {
+            return with_source_meta({
                 "success": True,
                 "count": len(tail),
                 "data": tail,
                 "source": "yfinance",
-            }
+            }, source_raw="yfinance", source_stage="primary")
         df_us: Optional[pd.DataFrame] = None
         source_us = "akshare.index_global_hist_em"
         if hasattr(ak, "index_global_hist_em"):
@@ -225,12 +239,12 @@ def fetch_global_index_hist_sina(symbol: str, limit: int = 60) -> Dict[str, Any]
             if len(df_us) > rows:
                 df_us = df_us.tail(rows)
             recs = _to_records(df_us)
-            return {
+            return with_source_meta({
                 "success": True,
                 "count": len(recs),
                 "data": recs,
                 "source": source_us,
-            }
+            }, source_raw=source_us, source_stage="fallback")
         result: Dict[str, Any] = {
             "success": False,
             "count": 0,
@@ -239,7 +253,7 @@ def fetch_global_index_hist_sina(symbol: str, limit: int = 60) -> Dict[str, Any]
         }
         if last_error:
             result["message"] = last_error
-        return result
+        return with_source_meta(result, source_raw="yfinance", source_stage="fallback")
 
     # ---------- 非美股：优先新浪 global_hist ----------
     if hasattr(ak, "index_global_hist_sina"):
@@ -267,7 +281,7 @@ def fetch_global_index_hist_sina(symbol: str, limit: int = 60) -> Dict[str, Any]
         result: Dict[str, Any] = {"success": False, "count": 0, "data": [], "source": source}
         if last_error:
             result["message"] = last_error
-        return result
+        return with_source_meta(result, source_raw=source, source_stage="fallback")
 
     if "date" in df.columns:
         df = df.sort_values("date")
@@ -275,12 +289,12 @@ def fetch_global_index_hist_sina(symbol: str, limit: int = 60) -> Dict[str, Any]
         df = df.tail(rows)
 
     records = _to_records(df)
-    return {
+    return with_source_meta({
         "success": True,
         "count": len(records),
         "data": records,
         "source": source,
-    }
+    }, source_raw=source, source_stage="primary")
 
 
 def tool_fetch_global_index_hist_sina(symbol: str, limit: int = 60) -> Dict[str, Any]:

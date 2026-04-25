@@ -15,6 +15,23 @@ realtime_full_fetch_cache:
   enabled: true
   ttl_seconds: 45
 
+# 代理策略（按数据源控制，避免全局代理污染）
+network:
+  proxy:
+    default:
+      enabled: false
+      url: ""
+    per_source:
+      yfinance:
+        enabled: true
+        url: "http://127.0.0.1:2080"
+      fmp:
+        enabled: false
+        url: ""
+      sina:
+        enabled: false
+        url: ""
+
 system:
   data_storage:
     data_dir: data
