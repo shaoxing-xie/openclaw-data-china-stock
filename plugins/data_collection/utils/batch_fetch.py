@@ -36,7 +36,8 @@ def batch_fetch_parallel(
     items: List[str],
     fetch_func: Callable[[str], Dict[str, Any]],
     max_workers: int = 5,
-    timeout: Optional[float] = None
+    timeout: Optional[float] = None,
+    batch_size: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     并行批量获取数据
@@ -64,6 +65,8 @@ def batch_fetch_parallel(
     errors = {}
     success_count = 0
     failed_count = 0
+    per_source_stats: Dict[str, Dict[str, int]] = {}
+    queue_start = time.time()
     
     if not items:
         return {
@@ -78,35 +81,57 @@ def batch_fetch_parallel(
         }
     
     logger.info(f"开始并行批量获取 {len(items)} 个项目，最大并发数: {max_workers}")
-    
-    # 使用ThreadPoolExecutor并行执行
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        # 提交所有任务
-        future_to_item = {
-            executor.submit(fetch_func, item): item
-            for item in items
-        }
-        
-        # 收集结果（整体等待时间由 as_completed 的 timeout 控制，
-        # 单个任务的阻塞时间使用 per_item_timeout 控制）
-        for future in as_completed(future_to_item, timeout=timeout):
-            item = future_to_item[future]
+
+    size = batch_size or len(items)
+    if size <= 0:
+        size = len(items)
+    queue_ms = int((time.time() - queue_start) * 1000)
+    batches = [items[idx: idx + size] for idx in range(0, len(items), size)]
+
+    for batch_idx, batch_items in enumerate(batches):
+        logger.info(f"执行批次 {batch_idx + 1}/{len(batches)}，items={len(batch_items)}")
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_item = {
+                executor.submit(fetch_func, item): item
+                for item in batch_items
+            }
+
             try:
-                per_item_timeout = timeout or 30.0
-                result = future.result(timeout=per_item_timeout)
-                if result and result.get('success', False):
-                    results[item] = result
-                    success_count += 1
-                else:
-                    error_msg = result.get('message', '获取失败') if result else '获取失败'
-                    errors[item] = error_msg
+                completed_futures = as_completed(future_to_item, timeout=timeout)
+                for future in completed_futures:
+                    item = future_to_item[future]
+                    try:
+                        per_item_timeout = timeout or 30.0
+                        result = future.result(timeout=per_item_timeout)
+                        if result and result.get('success', False):
+                            results[item] = result
+                            success_count += 1
+                            source_id = str(result.get("source_id") or "unknown")
+                            stat = per_source_stats.setdefault(source_id, {"success": 0, "failed": 0})
+                            stat["success"] += 1
+                        else:
+                            error_msg = result.get('message', '获取失败') if result else '获取失败'
+                            errors[item] = error_msg
+                            failed_count += 1
+                            source_id = str((result or {}).get("source_id") or "unknown")
+                            stat = per_source_stats.setdefault(source_id, {"success": 0, "failed": 0})
+                            stat["failed"] += 1
+                            logger.warning(f"获取 {item} 失败: {error_msg}")
+                    except Exception as e:
+                        error_msg = str(e)
+                        errors[item] = error_msg
+                        failed_count += 1
+                        stat = per_source_stats.setdefault("unknown", {"success": 0, "failed": 0})
+                        stat["failed"] += 1
+                        logger.error(f"获取 {item} 时发生异常: {error_msg}", exc_info=True)
+            except TimeoutError:
+                for item in batch_items:
+                    if item in results or item in errors:
+                        continue
+                    errors[item] = "batch timeout"
                     failed_count += 1
-                    logger.warning(f"获取 {item} 失败: {error_msg}")
-            except Exception as e:
-                error_msg = str(e)
-                errors[item] = error_msg
-                failed_count += 1
-                logger.error(f"获取 {item} 时发生异常: {error_msg}", exc_info=True)
+                    stat = per_source_stats.setdefault("unknown", {"success": 0, "failed": 0})
+                    stat["failed"] += 1
     
     execution_time = time.time() - start_time
     
@@ -119,7 +144,10 @@ def batch_fetch_parallel(
         'failed_count': failed_count,
         'results': results,
         'errors': errors,
-        'execution_time': execution_time
+        'execution_time': execution_time,
+        'total_ms': int(execution_time * 1000),
+        'queue_ms': queue_ms,
+        'per_source_stats': per_source_stats,
     }
 
 
@@ -127,7 +155,8 @@ def batch_fetch_parallel(
 def tool_fetch_multiple_etf_realtime(
     etf_codes: List[str],
     max_workers: int = 5,
-    timeout: Optional[float] = 30.0
+    timeout: Optional[float] = 30.0,
+    batch_size: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     OpenClaw工具：批量获取多个ETF的实时数据（并行）
@@ -152,7 +181,8 @@ def tool_fetch_multiple_etf_realtime(
             items=etf_codes,
             fetch_func=fetch_single_etf,
             max_workers=max_workers,
-            timeout=timeout
+            timeout=timeout,
+            batch_size=batch_size,
         )
         
         # 格式化返回结果
@@ -169,7 +199,10 @@ def tool_fetch_multiple_etf_realtime(
                 'total': batch_result['total'],
                 'success_count': batch_result['success_count'],
                 'failed_count': batch_result['failed_count'],
-                'execution_time': batch_result['execution_time']
+                'execution_time': batch_result['execution_time'],
+                'total_ms': batch_result.get('total_ms'),
+                'queue_ms': batch_result.get('queue_ms'),
+                'per_source_stats': batch_result.get('per_source_stats', {}),
             },
             'errors': batch_result['errors'] if batch_result['errors'] else None
         }
@@ -187,7 +220,8 @@ def tool_fetch_multiple_etf_realtime(
 def tool_fetch_multiple_index_realtime(
     index_codes: List[str],
     max_workers: int = 5,
-    timeout: Optional[float] = 30.0
+    timeout: Optional[float] = 30.0,
+    batch_size: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     OpenClaw工具：批量获取多个指数的实时数据（并行）
@@ -212,7 +246,8 @@ def tool_fetch_multiple_index_realtime(
             items=index_codes,
             fetch_func=fetch_single_index,
             max_workers=max_workers,
-            timeout=timeout
+            timeout=timeout,
+            batch_size=batch_size,
         )
         
         # 格式化返回结果
@@ -229,7 +264,10 @@ def tool_fetch_multiple_index_realtime(
                 'total': batch_result['total'],
                 'success_count': batch_result['success_count'],
                 'failed_count': batch_result['failed_count'],
-                'execution_time': batch_result['execution_time']
+                'execution_time': batch_result['execution_time'],
+                'total_ms': batch_result.get('total_ms'),
+                'queue_ms': batch_result.get('queue_ms'),
+                'per_source_stats': batch_result.get('per_source_stats', {}),
             },
             'errors': batch_result['errors'] if batch_result['errors'] else None
         }
@@ -247,7 +285,8 @@ def tool_fetch_multiple_index_realtime(
 def tool_fetch_multiple_option_realtime(
     contract_codes: List[str],
     max_workers: int = 5,
-    timeout: Optional[float] = 30.0
+    timeout: Optional[float] = 30.0,
+    batch_size: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     OpenClaw工具：批量获取多个期权合约的实时数据（并行）
@@ -272,7 +311,8 @@ def tool_fetch_multiple_option_realtime(
             items=contract_codes,
             fetch_func=fetch_single_option,
             max_workers=max_workers,
-            timeout=timeout
+            timeout=timeout,
+            batch_size=batch_size,
         )
         
         # 格式化返回结果
@@ -289,7 +329,10 @@ def tool_fetch_multiple_option_realtime(
                 'total': batch_result['total'],
                 'success_count': batch_result['success_count'],
                 'failed_count': batch_result['failed_count'],
-                'execution_time': batch_result['execution_time']
+                'execution_time': batch_result['execution_time'],
+                'total_ms': batch_result.get('total_ms'),
+                'queue_ms': batch_result.get('queue_ms'),
+                'per_source_stats': batch_result.get('per_source_stats', {}),
             },
             'errors': batch_result['errors'] if batch_result['errors'] else None
         }
@@ -307,7 +350,8 @@ def tool_fetch_multiple_option_realtime(
 def tool_fetch_multiple_option_greeks(
     contract_codes: List[str],
     max_workers: int = 5,
-    timeout: Optional[float] = 30.0
+    timeout: Optional[float] = 30.0,
+    batch_size: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     OpenClaw工具：批量获取多个期权合约的Greeks数据（并行）
@@ -332,7 +376,8 @@ def tool_fetch_multiple_option_greeks(
             items=contract_codes,
             fetch_func=fetch_single_greeks,
             max_workers=max_workers,
-            timeout=timeout
+            timeout=timeout,
+            batch_size=batch_size,
         )
         
         # 格式化返回结果
@@ -349,7 +394,10 @@ def tool_fetch_multiple_option_greeks(
                 'total': batch_result['total'],
                 'success_count': batch_result['success_count'],
                 'failed_count': batch_result['failed_count'],
-                'execution_time': batch_result['execution_time']
+                'execution_time': batch_result['execution_time'],
+                'total_ms': batch_result.get('total_ms'),
+                'queue_ms': batch_result.get('queue_ms'),
+                'per_source_stats': batch_result.get('per_source_stats', {}),
             },
             'errors': batch_result['errors'] if batch_result['errors'] else None
         }

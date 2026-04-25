@@ -11,6 +11,7 @@ from pathlib import Path
 import sys
 import time
 from contextlib import nullcontext
+from threading import Lock
 
 try:
     import akshare as ak
@@ -47,6 +48,53 @@ try:
         CACHE_AVAILABLE = True
 except Exception:
     CACHE_AVAILABLE = False
+
+A50_SPOT_CACHE_TTL_SEC = 30.0
+A50_SPOT_RETRY_BUDGET = 2
+A50_SPOT_MIN_INTERVAL_SEC = 0.6
+_A50_SPOT_MEM_CACHE: Dict[str, Any] = {"data": None, "ts": 0.0}
+_A50_SPOT_CACHE_LOCK = Lock()
+_A50_SPOT_LAST_CALL_TS = 0.0
+
+
+def _failure_code(message: str) -> str:
+    text = str(message or "").lower()
+    if "rate" in text or "429" in text or "limit" in text:
+        return "RATE_LIMITED"
+    if "timeout" in text:
+        return "UPSTREAM_TIMEOUT"
+    if "empty" in text or "不可用" in text:
+        return "UPSTREAM_EMPTY_DATA"
+    return "UPSTREAM_FAILED"
+
+
+def _throttle_spot_call(min_interval_sec: float = A50_SPOT_MIN_INTERVAL_SEC) -> None:
+    global _A50_SPOT_LAST_CALL_TS
+    if min_interval_sec <= 0:
+        return
+    now = time.perf_counter()
+    elapsed = now - _A50_SPOT_LAST_CALL_TS
+    if elapsed < min_interval_sec:
+        time.sleep(min_interval_sec - elapsed)
+    _A50_SPOT_LAST_CALL_TS = time.perf_counter()
+
+
+def _load_a50_spot_cache(ttl_sec: float) -> Tuple[Optional[Dict[str, Any]], Optional[int]]:
+    with _A50_SPOT_CACHE_LOCK:
+        payload = _A50_SPOT_MEM_CACHE.get("data")
+        ts = float(_A50_SPOT_MEM_CACHE.get("ts") or 0.0)
+    if not payload or ts <= 0:
+        return None, None
+    age_ms = int((time.time() - ts) * 1000)
+    if age_ms > int(ttl_sec * 1000):
+        return None, age_ms
+    return dict(payload), age_ms
+
+
+def _save_a50_spot_cache(payload: Dict[str, Any]) -> None:
+    with _A50_SPOT_CACHE_LOCK:
+        _A50_SPOT_MEM_CACHE["data"] = dict(payload)
+        _A50_SPOT_MEM_CACHE["ts"] = time.time()
 
 
 def normalize_date(date_str: str) -> str:
@@ -284,52 +332,83 @@ def fetch_a50_data(
         else:
             start_date = (now - timedelta(days=30)).strftime("%Y%m%d")
         
+        started = time.perf_counter()
         result = {
             'success': True,
             'symbol': symbol,
             'source': 'mixed',
             'spot_data': None,
             'hist_data': None,
-            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'source_id': 'fallback',
+            'source_raw': 'futures.a50',
+            'source_stage': 'derived',
+            'quality': 'ok',
+            'degraded_reason': None,
+            'failure_code': None,
+            'cache_hit': False,
+            'cache_age_ms': None,
+            'attempts': [],
         }
         
         # 获取实时数据（使用期货接口）
         if data_type in ["spot", "both"]:
             try:
-                spot_df = None
-                last_err = None
-                for i in range(3):
-                    try:
-                        ctx = without_proxy_env() if PROXY_ENV_AVAILABLE else nullcontext()
-                        with ctx:
-                            spot_df = ak.futures_global_spot_em()
-                        break
-                    except Exception as e:  # noqa: BLE001
-                        last_err = repr(e)
-                        time.sleep(1.5 * (i + 1))
+                ttl_sec = A50_SPOT_CACHE_TTL_SEC if use_cache else 0.0
+                cached_payload, age_ms = _load_a50_spot_cache(ttl_sec)
+                if cached_payload:
+                    result['spot_data'] = cached_payload
+                    result['source'] = "futures_global_spot_em_cache"
+                    result['source_id'] = "cache"
+                    result['source_raw'] = "futures_global_spot_em"
+                    result['source_stage'] = "cache"
+                    result['cache_hit'] = True
+                    result['cache_age_ms'] = age_ms
+                    result['attempts'].append({
+                        "source": "futures_global_spot_em",
+                        "source_id": "eastmoney",
+                        "source_stage": "cache",
+                        "success": True,
+                        "elapsed_ms": 0,
+                    })
+                else:
+                    spot_df = None
+                    last_err = None
+                    retries = max(A50_SPOT_RETRY_BUDGET, 0)
+                    for i in range(retries + 1):
+                        try:
+                            _throttle_spot_call(A50_SPOT_MIN_INTERVAL_SEC)
+                            ctx = without_proxy_env() if PROXY_ENV_AVAILABLE else nullcontext()
+                            with ctx:
+                                spot_df = ak.futures_global_spot_em()
+                            break
+                        except Exception as e:  # noqa: BLE001
+                            last_err = repr(e)
+                            if i < retries:
+                                time.sleep(1.2 * (i + 1))
                 
-                if spot_df is not None and not spot_df.empty:
+                    if spot_df is not None and not spot_df.empty:
                     # 查找代码列和名称列
-                    code_col = None
-                    name_col = None
-                    for col in spot_df.columns:
-                        col_lower = str(col).lower()
-                        if 'code' in col_lower or '代码' in col_lower or 'symbol' in col_lower:
-                            code_col = col
-                        if 'name' in col_lower or '名称' in col_lower or '品种' in col_lower:
-                            name_col = col
+                        code_col = None
+                        name_col = None
+                        for col in spot_df.columns:
+                            col_lower = str(col).lower()
+                            if 'code' in col_lower or '代码' in col_lower or 'symbol' in col_lower:
+                                code_col = col
+                            if 'name' in col_lower or '名称' in col_lower or '品种' in col_lower:
+                                name_col = col
                     
-                    if code_col is None or name_col is None:
-                        if len(spot_df.columns) >= 2:
-                            code_col = spot_df.columns[0]
-                            name_col = spot_df.columns[1]
-                        else:
-                            code_col = None
-                            name_col = None
+                        if code_col is None or name_col is None:
+                            if len(spot_df.columns) >= 2:
+                                code_col = spot_df.columns[0]
+                                name_col = spot_df.columns[1]
+                            else:
+                                code_col = None
+                                name_col = None
                     
                     # 查找A50期指相关合约（期货）
-                    if code_col and name_col:
-                        search_keywords = ["A50", "CHINA50", "XIN9", "富时", "FTSE"]
+                        if code_col and name_col:
+                            search_keywords = ["A50", "CHINA50", "XIN9", "富时", "FTSE"]
                         
                         # 先找到所有A50相关的合约
                         a50_all = pd.DataFrame()
@@ -419,7 +498,7 @@ def fetch_a50_data(
                                     except (ValueError, TypeError):
                                         continue
                             
-                            result['spot_data'] = {
+                            spot_payload = {
                                 "code": a50_code,
                                 "name": str(row[name_col]),
                                 "current_price": current_price,
@@ -427,7 +506,31 @@ def fetch_a50_data(
                                 "volume": volume,
                                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                             }
+                            result['spot_data'] = spot_payload
                             result["source"] = "futures_global_spot_em"
+                            result["source_id"] = "eastmoney"
+                            result["source_raw"] = "futures_global_spot_em"
+                            result["source_stage"] = "primary"
+                            result["cache_hit"] = False
+                            result["cache_age_ms"] = None
+                            if use_cache:
+                                _save_a50_spot_cache(spot_payload)
+                            result['attempts'].append({
+                                "source": "futures_global_spot_em",
+                                "source_id": "eastmoney",
+                                "source_stage": "primary",
+                                "success": True,
+                                "elapsed_ms": None,
+                            })
+                    elif last_err:
+                        result['attempts'].append({
+                            "source": "futures_global_spot_em",
+                            "source_id": "eastmoney",
+                            "source_stage": "primary",
+                            "success": False,
+                            "failure_code": _failure_code(last_err),
+                            "message": str(last_err)[:240],
+                        })
             except Exception:
                 pass
         
@@ -564,6 +667,9 @@ def fetch_a50_data(
                     }
                     if result["source"] == "mixed":
                         result["source"] = "futures_foreign_hist"
+                        result["source_id"] = "sina"
+                        result["source_raw"] = "futures_foreign_hist"
+                        result["source_stage"] = "primary"
                     elif "cache" not in result["source"]:
                         result["source"] = "mixed"
             except Exception:
@@ -575,12 +681,26 @@ def fetch_a50_data(
                 "success": False,
                 "symbol": symbol,
                 "source": "fallback",
+                "source_id": "fallback",
+                "source_raw": "futures.a50",
+                "source_stage": "fallback",
                 "spot_data": None,
                 "hist_data": None,
+                "quality": "degraded",
+                "degraded_reason": "A50_BOTH_PATHS_FAILED",
+                "failure_code": "A50_BOTH_PATHS_FAILED",
+                "cache_hit": False,
+                "cache_age_ms": None,
                 "message": "A50期指数据暂时不可用，请稍后重试",
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "elapsed_ms": int((time.perf_counter() - started) * 1000),
+                "attempts": result.get("attempts", []),
             }
-        
+        if data_type in ["spot", "both"] and result["spot_data"] is None and result["hist_data"] is not None:
+            result["quality"] = "degraded"
+            result["degraded_reason"] = "SPOT_UNAVAILABLE_HIST_ONLY"
+            result["failure_code"] = "SPOT_UNAVAILABLE_HIST_ONLY"
+        result["elapsed_ms"] = int((time.perf_counter() - started) * 1000)
         return result
     
     except Exception as e:

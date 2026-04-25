@@ -6,6 +6,7 @@
 
 import os
 import argparse
+import re
 from pathlib import Path
 from typing import Dict, Optional, Any, List
 from datetime import datetime
@@ -28,8 +29,11 @@ from src.logger_config import get_module_logger
 
 logger = get_module_logger(__name__)
 
+_CREDENTIAL_KEY_PATTERN = re.compile(r"(api[_-]?key|token|secret|password)", re.IGNORECASE)
+_ENV_PLACEHOLDER_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
+
 # -------- env placeholder resolution --------
-def _resolve_env_placeholders(obj: Any) -> Any:
+def _resolve_env_placeholders(obj: Any, path: str = "") -> Any:
     """
     Recursively resolve ${ENV_VAR} placeholders in config objects.
 
@@ -37,16 +41,35 @@ def _resolve_env_placeholders(obj: Any) -> Any:
     - If env var is missing/empty, return None (so defaults/overrides can apply).
     """
     if isinstance(obj, dict):
-        return {k: _resolve_env_placeholders(v) for k, v in obj.items()}
+        out: Dict[str, Any] = {}
+        for k, v in obj.items():
+            child_path = f"{path}.{k}" if path else str(k)
+            out[k] = _resolve_env_placeholders(v, child_path)
+        return out
     if isinstance(obj, list):
-        return [_resolve_env_placeholders(v) for v in obj]
+        return [_resolve_env_placeholders(v, f"{path}[{idx}]") for idx, v in enumerate(obj)]
     if isinstance(obj, str):
         s = obj.strip()
-        if s.startswith("${") and s.endswith("}") and len(s) > 3 and s.count("${") == 1:
-            key = s[2:-1].strip()
+        matches = _ENV_PLACEHOLDER_PATTERN.findall(s)
+        if not matches:
+            return obj
+        resolved = obj
+        missing_keys: List[str] = []
+        for key in matches:
             val = os.getenv(key, "").strip()
-            return val if val else None
-        return obj
+            if not val:
+                missing_keys.append(key)
+                continue
+            resolved = resolved.replace(f"${{{key}}}", val)
+        if missing_keys:
+            logger.warning(
+                "ENV 占位符解析失败: `%s` 缺失 %s（建议在 .env 或系统环境中配置）",
+                path or "<root>",
+                ",".join(missing_keys),
+            )
+            if resolved == obj and s.startswith("${") and s.endswith("}") and len(matches) == 1:
+                return None
+        return resolved
     return obj
 
 # 配置缓存（用于实时生效）
@@ -147,6 +170,39 @@ def merge_config(default: Dict, user: Dict) -> Dict:
     return result
 
 
+def _warn_missing_credentials(config: Dict[str, Any]) -> None:
+    """Warn when enabled config sections have empty credential fields."""
+
+    def _walk(node: Any, path: str, active: bool = True) -> None:
+        if not active:
+            return
+        if isinstance(node, dict):
+            enabled = node.get("enabled")
+            if isinstance(enabled, bool) and not enabled:
+                return
+            for k, v in node.items():
+                p = f"{path}.{k}" if path else str(k)
+                if _CREDENTIAL_KEY_PATTERN.search(str(k)):
+                    if v is None or (isinstance(v, str) and not v.strip()):
+                        logger.warning(
+                            "配置凭证缺失: `%s` 为空（若该数据源需启用，请检查 .env 与 config 占位符）",
+                            p,
+                        )
+                    elif isinstance(v, list):
+                        non_empty = [str(x).strip() for x in v if str(x).strip()]
+                        if not non_empty:
+                            logger.warning(
+                                "配置凭证缺失: `%s` 列表为空（若该数据源需启用，请检查 .env 与 config 占位符）",
+                                p,
+                            )
+                _walk(v, p, True)
+        elif isinstance(node, list):
+            for idx, item in enumerate(node):
+                _walk(item, f"{path}[{idx}]", True)
+
+    _walk(config, "")
+
+
 def load_system_config(config_path: str = "config.yaml", use_cache: bool = True) -> Dict[str, Any]:
     """
     加载完整系统配置（统一配置管理）
@@ -212,6 +268,7 @@ def load_system_config(config_path: str = "config.yaml", use_cache: bool = True)
         
         # 合并配置
         config = merge_config(default_config, user_config)
+        _warn_missing_credentials(config)
 
         # Tushare 配置校验：如果已启用，但 token 仍为空（${TUSHARE_TOKEN} 解析失败）
         tushare_cfg = config.get("tushare", {}) if isinstance(config.get("tushare", {}), dict) else {}
