@@ -53,6 +53,8 @@ Canonical inventory scope for normalization is `config/tools_manifest.yaml` (`to
 
 - **Index / global index / ETF / option**
   - likely `akshare|sina|eastmoney|mootdx|yfinance|fmp|cache`
+  - `tool_fetch_cni_index_daily` -> `akshare` (`index_hist_cni`)
+  - `tool_fetch_csindex_index_daily` -> `akshare` (`stock_zh_index_hist_csindex`)
 - **A-share stock realtime/minute/historical**
   - likely `mootdx|sina|eastmoney|akshare|tushare|baostock|efinance|cache`
 - **Fund flow / northbound / sector / limit-up**

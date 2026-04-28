@@ -3,7 +3,7 @@
 This inventory is the baseline for source normalization and third-party configuration guidance.
 
 - source of truth: `config/tools_manifest.yaml`
-- current scope: 88 external `tool_*`
+- current scope: 90 external `tool_*`
 - normalization target: all tools should converge to canonical `source_id` semantics in outputs or wrappers.
 
 ## Canonical source_id (reference)
@@ -16,6 +16,8 @@ This inventory is the baseline for source normalization and third-party configur
 |---|---|---|
 | `tool_fetch_index_realtime` | index | `mootdx,sina,eastmoney,akshare,cache` |
 | `tool_fetch_index_historical` | index | `tushare,akshare,sina,eastmoney,cache` |
+| `tool_fetch_cni_index_daily` | index | `akshare` |
+| `tool_fetch_csindex_index_daily` | index | `akshare` |
 | `tool_fetch_index_minute` | index | `mootdx,sina,eastmoney,akshare,cache` |
 | `tool_fetch_index_opening` | index | `akshare,sina,eastmoney,mootdx,cache` |
 | `tool_fetch_index_data` | merged-index | `derived` |

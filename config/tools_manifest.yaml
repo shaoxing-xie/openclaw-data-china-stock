@@ -32,6 +32,58 @@ tools:
         description: 结束日期 YYYYMMDD
     required:
     - index_code
+- id: tool_fetch_cni_index_daily
+  label: 获取国证指数日频数据
+  description: 基于 AkShare index_hist_cni 获取指定国证/深证指数区间日频行情（标准化输出，含质量元数据）。
+  description_short: 国证指数日频（AkShare index_hist_cni）。
+  parameters:
+    type: object
+    properties:
+      symbol:
+        type: string
+        description: 指数代码，如 399001
+      start_date:
+        type: string
+        description: 开始日期 YYYYMMDD 或 YYYY-MM-DD
+      end_date:
+        type: string
+        description: 结束日期 YYYYMMDD 或 YYYY-MM-DD
+      task_id:
+        type: string
+        description: 任务标识（可选）
+      run_id:
+        type: string
+        description: 运行标识（可选）
+    required:
+    - symbol
+    - start_date
+    - end_date
+- id: tool_fetch_csindex_index_daily
+  label: 获取中证指数日频数据
+  description: 基于 AkShare stock_zh_index_hist_csindex 获取指定中证指数区间日频行情（标准化输出，含质量元数据）。
+  description_short: 中证指数日频（AkShare stock_zh_index_hist_csindex）。
+  parameters:
+    type: object
+    properties:
+      symbol:
+        type: string
+        description: 指数代码，如 000300
+      start_date:
+        type: string
+        description: 开始日期 YYYYMMDD 或 YYYY-MM-DD
+      end_date:
+        type: string
+        description: 结束日期 YYYYMMDD 或 YYYY-MM-DD
+      task_id:
+        type: string
+        description: 任务标识（可选）
+      run_id:
+        type: string
+        description: 运行标识（可选）
+    required:
+    - symbol
+    - start_date
+    - end_date
 - id: tool_fetch_index_minute
   label: 获取指数分钟数据
   description: 获取指数分钟K线数据。

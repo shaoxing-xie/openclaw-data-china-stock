@@ -34,7 +34,7 @@
 
 | 子目录 / 文件 | 主要 `tool_*` | 备注 |
 |------------------|----------------|------|
-| **index/** | `tool_fetch_index_realtime`、`tool_fetch_index_historical`、`tool_fetch_index_minute`、`tool_fetch_index_opening`、`tool_fetch_global_index_spot` | 指数代码约定见 `index/index_code_utils.py`；`index/指数采集工具与原始接口说明.md` |
+| **index/** | `tool_fetch_index_realtime`、`tool_fetch_index_historical`、`tool_fetch_cni_index_daily`、`tool_fetch_csindex_index_daily`、`tool_fetch_index_minute`、`tool_fetch_index_opening`、`tool_fetch_global_index_spot` | 指数代码约定见 `index/index_code_utils.py`；`index/指数采集工具与原始接口说明.md` |
 | **etf/** | `tool_fetch_etf_realtime`、`tool_fetch_etf_historical`、`tool_fetch_etf_minute`、`tool_fetch_etf_iopv_snapshot` | ETF 以 5/1 开头的 6 位在部分指数入口会**自动改调** ETF 模块 |
 | **option/** | `tool_fetch_option_realtime`、`tool_fetch_option_greeks`、`tool_fetch_option_minute` | |
 | **futures/** | `tool_fetch_a50_data` | A50 等 |
@@ -401,6 +401,41 @@ result = tool_fetch_index_historical(
 - **回测**：为策略回测提供历史数据
 - **趋势判断**：分析指数长期趋势
 - **数据补全**：补充缺失的历史数据
+
+---
+
+#### 4.1 index/fetch_cni_daily.py - 国证指数日频（新增）
+
+**功能说明**：
+- 通过 AkShare `index_hist_cni` 获取国证/深证指数日频历史行情
+- 标准化输出字段：`date/open/high/low/close/volume/amount/change_percent`
+- 返回统一质量字段：`quality_status/degraded_reason/failure_code/attempts/elapsed_ms`
+- 返回 `_meta` 契约（`schema_name/schema_version/task_id/run_id/data_layer/lineage_refs`）
+
+**输入参数**：
+- `symbol` (str): 指数代码，如 `399001`
+- `start_date` (str): 开始日期，支持 `YYYYMMDD`/`YYYY-MM-DD`
+- `end_date` (str): 结束日期，支持 `YYYYMMDD`/`YYYY-MM-DD`
+
+**口径说明**：
+- 上游文档口径：成交量为**万手**、成交额为**亿元**
+- 工具输出同时保留：
+  - 标准字段：`volume`（手）、`amount`（元）
+  - 原始字段：`volume_raw`（万手）、`amount_raw`（亿元）
+
+---
+
+#### 4.2 index/fetch_csindex_daily.py - 中证指数日频（新增）
+
+**功能说明**：
+- 通过 AkShare `stock_zh_index_hist_csindex` 获取中证指数日频历史行情
+- 与 `tool_fetch_cni_index_daily` 共用统一输出契约与质量语义
+- 返回 `_meta` 中的数据血缘，便于后续回放/审计
+
+**输入参数**：
+- `symbol` (str): 指数代码，如 `000300`
+- `start_date` (str): 开始日期，支持 `YYYYMMDD`/`YYYY-MM-DD`
+- `end_date` (str): 结束日期，支持 `YYYYMMDD`/`YYYY-MM-DD`
 
 ---
 

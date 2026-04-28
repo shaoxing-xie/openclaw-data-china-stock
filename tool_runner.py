@@ -109,6 +109,8 @@ ALIASES = {
     "tool_fetch_stock_minute": ("tool_fetch_stock_minute", {}),
     "tool_fetch_stock_realtime": ("tool_fetch_stock_realtime", {}),
     "tool_fetch_etf_iopv_snapshot": ("tool_fetch_etf_iopv_snapshot", {}),
+    "tool_fetch_cni_index_daily": ("tool_fetch_cni_index_daily", {}),
+    "tool_fetch_csindex_index_daily": ("tool_fetch_csindex_index_daily", {}),
 }
 
 class TradingCopilotParams(BaseModel):
@@ -176,6 +178,14 @@ TOOL_MAP: Dict[str, ToolSpec] = {
     "tool_fetch_etf_iopv_snapshot": ToolSpec(
         module_path="plugins.data_collection.etf.fetch_realtime",
         function_name="tool_fetch_etf_iopv_snapshot",
+    ),
+    "tool_fetch_cni_index_daily": ToolSpec(
+        module_path="plugins.data_collection.index.fetch_cni_daily",
+        function_name="tool_fetch_cni_index_daily",
+    ),
+    "tool_fetch_csindex_index_daily": ToolSpec(
+        module_path="plugins.data_collection.index.fetch_csindex_daily",
+        function_name="tool_fetch_csindex_index_daily",
     ),
     "tool_get_option_contracts": ToolSpec(
         module_path="plugins.data_collection.utils.get_contracts",
