@@ -1,8 +1,8 @@
 # Changelog
 
-## 2026-04-28 (v0.5.4)
+## 2026-04-28 (v0.5.5)
 
-### Major: CNI + CSIndex daily collectors
+### Major: CNI + CSIndex daily collectors + release hygiene
 
 - 新增双工具：
   - `tool_fetch_cni_index_daily`（AkShare `index_hist_cni`）
@@ -21,6 +21,7 @@
   - `tests/test_fetch_cni_daily.py`
   - `tests/test_fetch_csindex_daily.py`
   - `scripts/smoke_cni_csindex_daily.py`
+- 发布包清理：`.clawhubignore` 排除 `.code-review-graph` 等本地开发产物，避免发布体积异常与安装失败。
 
 ## 2026-04-19 (v0.5.3)
 

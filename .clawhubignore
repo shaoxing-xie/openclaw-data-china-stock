@@ -2,6 +2,10 @@
 data/
 logs/
 
+# Cursor / local code graph artifacts (must never ship)
+.code-review-graph/
+.code-review-graphignore
+
 # Disk caches / artifacts (parquet/jsonl/sql)
 *.parquet
 *.jsonl
