@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-04-28 (v0.5.4)
+
+### Major: CNI + CSIndex daily collectors
+
+- 新增双工具：
+  - `tool_fetch_cni_index_daily`（AkShare `index_hist_cni`）
+  - `tool_fetch_csindex_index_daily`（AkShare `stock_zh_index_hist_csindex`）
+- 两工具统一输出契约：`success/message/data/count/source_id/source_raw/source_stage/quality_status/degraded_reason/attempts/elapsed_ms/task_id/run_id/_meta`。
+- CNI 路径补充单位显式化与标准化输出：
+  - 原始字段：`volume_raw(万手)`、`amount_raw(亿元)`
+  - 标准字段：`volume(手)`、`amount(元)`
+- 新增质量门禁与错误码：`INVALID_PARAM`、`DEPENDENCY_MISSING`、`UPSTREAM_ERROR`、`UPSTREAM_EMPTY`、`UPSTREAM_SCHEMA_DRIFT`、`NORMALIZE_FAILED`。
+- 更新注册与文档：
+  - `tool_runner.py`
+  - `config/tools_manifest.{yaml,json}`
+  - `plugins/data_collection/{README.md,DATA_SOURCE_REGISTRY.md,DATA_SOURCE_TOOL_INVENTORY.md}`
+  - `plugins/data_collection/index/指数采集工具与原始接口说明.md`
+- 新增测试与 smoke：
+  - `tests/test_fetch_cni_daily.py`
+  - `tests/test_fetch_csindex_daily.py`
+  - `scripts/smoke_cni_csindex_daily.py`
+
 ## 2026-04-19 (v0.5.3)
 
 ### Major: `market-sentinel` skill (sentiment aggregate)
