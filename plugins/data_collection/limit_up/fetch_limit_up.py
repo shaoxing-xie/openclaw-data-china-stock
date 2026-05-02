@@ -221,6 +221,21 @@ def _prev_calendar_date(date: str) -> str:
     return prev.strftime("%Y%m%d")
 
 
+def _is_same_day_intraday(date: str) -> bool:
+    """
+    盘中窗口判断：当天且 15:10 前。
+    目的：避免盘中涨停池尚未完全展开时触发过严质量闸门。
+    """
+    try:
+        now = datetime.now().astimezone()
+        if date != now.strftime("%Y%m%d"):
+            return False
+        hm = now.hour * 60 + now.minute
+        return hm < (15 * 60 + 10)
+    except Exception:
+        return False
+
+
 def _calc_sentiment_stage(metrics: Dict[str, float]) -> Dict[str, Any]:
     # 100-point weighted model:
     # 主生态 40, 昨日延续 35, 强势扩散 15, 次新活跃 10
@@ -347,6 +362,7 @@ def tool_fetch_limit_up_stocks(
         dates = [datetime.now().strftime("%Y%m%d")]
 
     all_rows: List[Dict[str, Any]] = []
+    all_codes: set[str] = set()
     attempts: List[Dict[str, Any]] = []
     previous_changes: List[float] = []
     strong_pool_count = 0
@@ -355,6 +371,7 @@ def tool_fetch_limit_up_stocks(
     broken_count = 0
 
     for d in dates:
+        intraday_mode = _is_same_day_intraday(d)
         # approved chain: em -> previous -> strong -> sub_new -> cache
         em_df, em_err = _fetch_pool_df("stock_zt_pool_em", d)
         if em_df is not None and not em_df.empty:
@@ -363,7 +380,10 @@ def tool_fetch_limit_up_stocks(
             rows = _extract_main_rows_from_df(em_df)
             for r in rows:
                 r["date"] = d
-                all_rows.append(r)
+                code = str(r.get("code") or "")
+                if code and code not in all_codes:
+                    all_rows.append(r)
+                    all_codes.add(code)
             if COL_BROKEN in em_df.columns:
                 try:
                     broken_count += int(em_df[COL_BROKEN].fillna(0).astype(float).sum())
@@ -391,6 +411,17 @@ def tool_fetch_limit_up_stocks(
         if strong_df is not None and not strong_df.empty:
             attempts.append({"source": "akshare.stock_zt_pool_strong_em", "ok": True, "message": d})
             strong_pool_count += int(len(strong_df))
+            # 盘中阶段主池样本过少时，用 strong 池补齐可交易热度样本（保持去重）。
+            if intraday_mode and len(all_rows) < 5:
+                strong_rows = _extract_main_rows_from_df(strong_df)
+                for r in strong_rows:
+                    r["date"] = d
+                    code = str(r.get("code") or "")
+                    if code and code not in all_codes:
+                        all_rows.append(r)
+                        all_codes.add(code)
+                if strong_rows:
+                    source_used = "akshare.stock_zt_pool_strong_em+em"
         else:
             attempts.append(
                 {"source": "akshare.stock_zt_pool_strong_em", "ok": False, "message": strong_err or f"empty:{d}"}
@@ -405,9 +436,10 @@ def tool_fetch_limit_up_stocks(
                 {"source": "akshare.stock_zt_pool_sub_new_em", "ok": False, "message": sub_err or f"empty:{d}"}
             )
 
+    min_records = 1 if len(dates) > 1 else (3 if any(_is_same_day_intraday(d) for d in dates) else 5)
     gate = quality_gate_records(
         all_rows,
-        min_records=1 if len(dates) > 1 else 5,
+        min_records=min_records,
         required_fields=["code", "name", "change_pct", "continuous_limit_up_count"],
     )
     if not gate["ok"] and cached is None:

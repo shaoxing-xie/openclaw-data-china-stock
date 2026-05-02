@@ -1039,6 +1039,27 @@ tools:
       sector_data:
         type: object
         description: 可选，板块数据
+- id: tool_hotspot_discovery
+  label: 市场热点聚合
+  description: 聚合涨停、资金流、行业涨跌幅，输出当日热点TOP列表。
+  description_short: 聚合涨停与资金流，输出热点TOP列表。
+  scope: market_scanner
+  recommended: true
+  tool_group: market_sentiment
+  parameters:
+    type: object
+    properties:
+      date:
+        type: string
+        description: 指定交易日，支持 YYYYMMDD / YYYY-MM-DD
+      top_k:
+        type: number
+        description: 返回热点数量上限，默认 5（最大 20）
+        default: 5
+      min_heat_score:
+        type: number
+        description: 热度分阈值，低于阈值不纳入结果
+        default: 30
 - id: tool_write_limit_up_with_sector
   label: 涨停+板块日报写入
   description: 拉取当日涨停、板块热度与龙头，写入 data/limit_up_research 目录。
@@ -1746,3 +1767,49 @@ tools:
         type: string
     required:
     - sector_code
+
+- id: tool_calculate_sector_rps
+  label: 计算行业ETF RPS
+  description: 基于行业ETF代表池，计算 RPS(20/60/120) 与窗口数据（Phase A）。
+  description_short: 行业ETF RPS（20/60/120）。
+  parameters:
+    type: object
+    properties:
+      lookback_days:
+        description: 单个窗口或窗口列表，如 20 或 [20,60,120]
+        default: [20, 60, 120]
+      etf_codes:
+        type: string
+        description: 可选，逗号分隔ETF代码；为空则使用 sector_etf_mapping 配置
+        default: ""
+      trade_date:
+        type: string
+        description: 交易日 YYYY-MM-DD（可选）
+        default: ""
+      mode:
+        type: string
+        description: production|test
+        default: production
+
+- id: tool_sector_rotation_recommend
+  label: 行业轮动次日ETF推荐（RPS）
+  description: 基于 RPS(5/20)+动量（Phase A）输出 TopK 行业ETF推荐列表与因子拆解、风控提示。
+  description_short: 次日行业ETF推荐（Phase A）。
+  parameters:
+    type: object
+    properties:
+      top_k:
+        type: number
+        default: 5
+      trade_date:
+        type: string
+        description: 交易日 YYYY-MM-DD（可选）
+        default: ""
+      min_liquidity:
+        type: number
+        description: 最小成交额阈值（元）
+        default: 100000000
+      mode:
+        type: string
+        description: production|test
+        default: production

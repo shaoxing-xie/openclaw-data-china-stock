@@ -281,6 +281,14 @@ TOOL_MAP: Dict[str, ToolSpec] = {
         module_path="plugins.analysis.etf_rotation_research",
         function_name="tool_etf_rotation_research",
     ),
+    "tool_calculate_sector_rps": ToolSpec(
+        module_path="plugins.analysis.rps_engine",
+        function_name="tool_calculate_sector_rps",
+    ),
+    "tool_sector_rotation_recommend": ToolSpec(
+        module_path="plugins.analysis.sector_rotator",
+        function_name="tool_sector_rotation_recommend",
+    ),
     "tool_fetch_sector_constituents": ToolSpec(
         module_path="plugins.analysis.sector_constituents",
         function_name="tool_fetch_sector_constituents",
@@ -380,6 +388,10 @@ TOOL_MAP: Dict[str, ToolSpec] = {
     "tool_sector_heat_score": ToolSpec(
         module_path="plugins.data_collection.limit_up.sector_heat",
         function_name="tool_sector_heat_score",
+    ),
+    "tool_hotspot_discovery": ToolSpec(
+        module_path="plugins.analysis.hotspot_discovery",
+        function_name="tool_hotspot_discovery",
     ),
     "tool_write_limit_up_with_sector": ToolSpec(
         module_path="plugins.data_collection.limit_up.daily_report",

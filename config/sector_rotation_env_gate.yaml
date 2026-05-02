@@ -1,0 +1,25 @@
+# Sector rotation environment gate (RPS breadth / strength).
+# When enabled=false, tool returns gate=UNKNOWN with reason_codes env_gate_disabled (legacy behavior).
+
+version: 1
+updated_at: "2026-05-01"
+
+enabled: true
+
+# RPS(20d) threshold for counting "strong" sectors
+strong_rps_threshold: 85.0
+
+# strong_sector_ratio = count(rps20 >= strong_rps_threshold) / N_universe
+go_strong_ratio_min: 0.30
+caution_strong_ratio_min: 0.10
+
+# Applied to base allocation_pct (integer round). STOP uses 0.
+caution_allocation_multiplier: 0.5
+stop_allocation_multiplier: 0.0
+
+# Top-K volume confirmation (uses tool_fetch_market_data daily klines; units = plugin field)
+volume_signals:
+  enabled: true
+  lookback_days: 30
+  surge_ratio_min: 1.2
+  shrink_ratio_max: 0.7

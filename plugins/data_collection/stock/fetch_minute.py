@@ -742,6 +742,24 @@ def fetch_single_stock_minute(
 
     def _try_sina() -> None:
         nonlocal df, source
+        # Prefer AkShare-based Sina fetch when available (more stable contract and aligns with tests),
+        # then fall back to direct HTTP implementation.
+        if (df is None or df.empty) and AKSHARE_AVAILABLE:
+            debug["attempts"].append({"source": "sina_akshare", "ok": False})
+            try:
+                tmp = _fetch_stock_minute_sina(
+                    stock_code=stock_code,
+                    period=period,
+                    start_date_str=start_date_str,
+                    end_date_str=end_date_str,
+                )
+                if tmp is not None and not tmp.empty:
+                    df = tmp
+                    source = "sina_akshare"
+                    debug["attempts"][-1]["ok"] = True
+            except Exception as e:  # noqa: BLE001
+                debug["attempts"][-1]["error"] = repr(e)
+
         if df is None or df.empty:
             debug["attempts"].append({"source": "sina_http", "ok": False})
             try:
@@ -756,22 +774,6 @@ def fetch_single_stock_minute(
                     source = "sina_http"
                     debug["attempts"][-1]["ok"] = True
                     return
-            except Exception as e:  # noqa: BLE001
-                debug["attempts"][-1]["error"] = repr(e)
-
-        if (df is None or df.empty) and AKSHARE_AVAILABLE:
-            debug["attempts"].append({"source": "sina_akshare", "ok": False})
-            try:
-                tmp = _fetch_stock_minute_sina(
-                    stock_code=stock_code,
-                    period=period,
-                    start_date_str=start_date_str,
-                    end_date_str=end_date_str,
-                )
-                if tmp is not None and not tmp.empty:
-                    df = tmp
-                    source = "sina_akshare"
-                    debug["attempts"][-1]["ok"] = True
             except Exception as e:  # noqa: BLE001
                 debug["attempts"][-1]["error"] = repr(e)
 
