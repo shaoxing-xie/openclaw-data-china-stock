@@ -858,5 +858,9 @@ def fetch_global_index_spot(
 
 
 def tool_fetch_global_index_spot(index_codes: Optional[str] = None) -> Dict[str, Any]:
-    """OpenClaw 工具：获取全球主要指数最新快照。"""
+    """OpenClaw 工具：获取全球主要指数最新快照。
+
+    直接走 ``fetch_global_index_spot``：编排器与之一致，且避免消费方（如助手 Chart）
+    仓库未包含 ``plugins.connectors`` 时导入失败。
+    """
     return fetch_global_index_spot(index_codes=index_codes)

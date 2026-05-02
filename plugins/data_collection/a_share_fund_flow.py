@@ -150,7 +150,6 @@ ENABLE_EASTMONEY_FALLBACK = str(os.environ.get("FUND_FLOW_ENABLE_EASTMONEY_FALLB
 THS_MARKET_PROXY_HISTORY_FILE = (
     Path(__file__).resolve().parents[2] / "data" / "cache" / "fund_flow" / "ths_market_proxy_history.json"
 )
-_TUSHARE_PRO = None
 
 
 def _clip_limit(n: int) -> int:
@@ -169,19 +168,11 @@ def _infer_market(code: str) -> str:
 
 
 def _get_tushare_pro():
-    global _TUSHARE_PRO
-    if _TUSHARE_PRO is not None:
-        return _TUSHARE_PRO
     if not TUSHARE_AVAILABLE:
         return None
-    token = (os.environ.get("TUSHARE_TOKEN") or "").strip()
-    if not token:
-        return None
-    try:
-        _TUSHARE_PRO = ts.pro_api(token)
-    except Exception:
-        _TUSHARE_PRO = None
-    return _TUSHARE_PRO
+    from plugins.connectors.tushare.pro_client import get_tushare_pro as _g
+
+    return _g()
 
 
 def _tushare_ts_code(code: str, market: str) -> str:

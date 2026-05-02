@@ -40,7 +40,6 @@ except Exception:
         return nullcontext()
 
 
-_TUSHARE_PRO = None
 ENABLE_LEGACY_FALLBACK = str(os.environ.get("NORTHBOUND_ENABLE_LEGACY_FALLBACK", "true")).lower() in (
     "1",
     "true",
@@ -50,19 +49,10 @@ ENABLE_LEGACY_FALLBACK = str(os.environ.get("NORTHBOUND_ENABLE_LEGACY_FALLBACK",
 
 
 def _get_tushare_pro():
-    global _TUSHARE_PRO
-    if _TUSHARE_PRO is not None:
-        return _TUSHARE_PRO
-    if not TUSHARE_AVAILABLE:
-        return None
-    token = (os.environ.get("TUSHARE_TOKEN") or "").strip()
-    if not token:
-        return None
-    try:
-        _TUSHARE_PRO = ts.pro_api(token)
-    except Exception:
-        _TUSHARE_PRO = None
-    return _TUSHARE_PRO
+    """Delegates to ``plugins.connectors.tushare.pro_client`` (P1-tushare migration anchor)."""
+    from plugins.connectors.tushare.pro_client import get_tushare_pro as _g
+
+    return _g()
 
 
 def _has_tushare_token() -> bool:

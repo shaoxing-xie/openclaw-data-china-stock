@@ -44,9 +44,13 @@ def read_cache_data(
     date: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    **kwargs: Any,
 ) -> Dict[str, Any]:
     """
     Read cached parquet data for a given data_type and symbol.
+
+    Extra kwargs (e.g. ``skip_online_refill`` from merged tools) are ignored:
+    this plugin build has **no online refill** in the cache reader.
 
     Returns a JSON-serializable structure:
       - success: bool

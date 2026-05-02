@@ -110,3 +110,7 @@ This inventory is the baseline for source normalization and third-party configur
 - New data source branch in any tool: update this file and `DATA_SOURCE_REGISTRY.md`.
 - New external tool in `config/tools_manifest.yaml`: add a row in this file.
 - If one tool maps to unknown source chain, use `unknown` and keep `source_raw`.
+
+## Cross-table (capabilities & business mapping)
+
+For **business semantic → `tool_id` → Router / capability → code path** and the **dual-track metadata matrix** (`with_source_meta` vs `normalize_contract`), maintain **[`DATA_SOURCE_CONNECTORS.md`](./DATA_SOURCE_CONNECTORS.md)** alongside this inventory (P0-surface / P1 freeze).

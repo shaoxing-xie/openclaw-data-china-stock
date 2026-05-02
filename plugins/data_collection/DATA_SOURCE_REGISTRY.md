@@ -49,6 +49,8 @@ All externally exposed tools SHOULD gradually converge to the following fields:
 
 Canonical inventory scope for normalization is `config/tools_manifest.yaml` (`tools[*].id`), currently 88 tools.
 
+**Connectors cross-table**: see [`DATA_SOURCE_CONNECTORS.md`](./DATA_SOURCE_CONNECTORS.md) for business-mapping rows and the **metadata dual-track matrix** (P0-surface / P1).
+
 ### Domain-based tool/source map
 
 - **Index / global index / ETF / option**

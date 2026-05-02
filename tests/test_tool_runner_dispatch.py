@@ -37,6 +37,10 @@ class TestToolRunnerDispatch(unittest.TestCase):
         module = _load_tool_runner_module()
         self.assertEqual(module.TOOL_MAP["tool_fetch_market_data"].module_path, "data.fetch_market_data")
         self.assertEqual(module.TOOL_MAP["tool_read_market_data"].module_path, "data.read_market_data")
+        self.assertEqual(
+            module.TOOL_MAP["tool_probe_source_health"].module_path,
+            "merged.probe_source_health",
+        )
 
     def test_tool_fetch_market_data_missing_asset_type(self):
         res = _run_tool(

@@ -77,10 +77,16 @@ def tool_read_market_data(
                     data_type=dt,
                     symbol=sym,
                     period=period or "15",
-                    date=date
+                    date=date,
+                    skip_online_refill=True,
                 )
             else:
-                out = read_cache_data(data_type=dt, symbol=sym, date=date)
+                out = read_cache_data(
+                    data_type=dt,
+                    symbol=sym,
+                    date=date,
+                    skip_online_refill=True,
+                )
         else:
             if not symbol:
                 sym = "000300" if "index" in dt else "510300"
@@ -93,7 +99,6 @@ def tool_read_market_data(
                 effective_start = start_date
                 effective_end = end_date
                 if not effective_start and not effective_end and date:
-                    # 兼容别名工具（tool_read_index_minute / tool_read_etf_minute）只传 date 的场景
                     effective_start = str(date)
                     effective_end = str(date)
                 if not effective_start and not effective_end and not date:
@@ -108,6 +113,7 @@ def tool_read_market_data(
                     period=period or "5",
                     start_date=effective_start,
                     end_date=effective_end,
+                    skip_online_refill=True,
                 )
             else:
                 effective_start = start_date
@@ -121,12 +127,11 @@ def tool_read_market_data(
                     data_type=dt,
                     symbol=sym,
                     start_date=effective_start,
-                    end_date=effective_end
+                    end_date=effective_end,
+                    skip_online_refill=True,
                 )
-        if out.get("success"):
-            results[dt] = out
-        else:
-            results[dt] = out
+        results[dt] = out
+        if not out.get("success"):
             errors.append(f"{dt}: {out.get('message', '')}")
 
     if len(types_to_fetch) == 1:

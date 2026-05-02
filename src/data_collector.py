@@ -1010,8 +1010,18 @@ def fetch_etf_minute_em(
     config = load_system_config()
     tushare_config = config.get('tushare', {})
     prefer_tushare_minute = tushare_config.get('prefer_minute', False)
-    
+    stk_mins_ok = False
     if prefer_tushare_minute:
+        from plugins.connectors.tushare import is_stk_mins_entitled
+
+        stk_mins_ok = is_stk_mins_entitled(config)
+        if not stk_mins_ok:
+            logger.warning(
+                "tushare.prefer_minute=true 但未声明表二 stk_mins 权限（permission_profile=minute_table2 / "
+                "tushare.minute_table2 / TUSHARE_FORCE_STK_MINS）；跳过 Tushare 分钟主路径，改用备用源"
+            )
+
+    if prefer_tushare_minute and stk_mins_ok:
         try:
             from src.tushare_fallback import fetch_etf_minute_tushare
             

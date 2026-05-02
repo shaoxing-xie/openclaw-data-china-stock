@@ -224,6 +224,10 @@ TOOL_MAP: Dict[str, ToolSpec] = {
         module_path="data.read_market_data",
         function_name="tool_read_market_data",
     ),
+    "tool_probe_source_health": ToolSpec(
+        module_path="merged.probe_source_health",
+        function_name="tool_probe_source_health",
+    ),
     "tool_metrics_snapshot": ToolSpec(
         module_path="plugins.utils.tool_metrics",
         function_name="tool_metrics_snapshot",

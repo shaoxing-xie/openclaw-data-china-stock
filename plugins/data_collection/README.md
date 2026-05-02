@@ -5,6 +5,7 @@
 **详细路线图与 Provider 矩阵**见 [ROADMAP.md](./ROADMAP.md)（与本文档互链）。
 **数据源标识与文档门禁**见 [DATA_SOURCE_REGISTRY.md](./DATA_SOURCE_REGISTRY.md)。
 **全工具数据源梳理清单（88 tools）**见 [DATA_SOURCE_TOOL_INVENTORY.md](./DATA_SOURCE_TOOL_INVENTORY.md)。
+**业务语义 × capability × 实现 × 双轨元数据矩阵（P0-surface）**见 [DATA_SOURCE_CONNECTORS.md](./DATA_SOURCE_CONNECTORS.md)。
 
 ---
 

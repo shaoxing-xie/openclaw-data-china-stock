@@ -2,6 +2,9 @@
 获取A50期指数据
 融合 Coze 插件 get_a50_index_data.py
 OpenClaw 插件工具
+
+技术债（P0-fallback-unknown / §4.2.14）：部分失败路径仍可能出现 ``source_id=fallback`` 占位帧；
+治理要求见 ``DATA_SOURCE_CONNECTORS.md`` 与规划任务 M；迁移时收入 ``connectors/*`` 并消除占位语义。
 """
 
 import pandas as pd

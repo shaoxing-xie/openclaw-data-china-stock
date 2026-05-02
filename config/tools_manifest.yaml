@@ -413,6 +413,23 @@ tools:
         type: string
       date:
         type: string
+      since:
+        type: string
+        description: 起始日期下限 YYYYMMDD（与日线/分钟 start_date 取 max）
+- id: tool_probe_source_health
+  label: 数据源健康探针（可选快照）
+  description: 粗粒度 import 级检查；write_snapshot=true 时写入 data/meta/source_health_snapshot.json 并记一条 JSONL。
+  description_short: 数据源健康快照
+  parameters:
+    type: object
+    properties:
+      source_ids:
+        type: string
+        description: 逗号分隔 source_id，默认 akshare,sina,yfinance,eastmoney,tushare
+      write_snapshot:
+        type: boolean
+        description: 是否落盘快照与事件
+        default: false
 - id: tool_read_index_daily
   label: 读取指数日线数据
   description: 从本地缓存读取指数日线数据。

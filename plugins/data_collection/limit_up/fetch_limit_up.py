@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from contextlib import nullcontext
 from datetime import datetime, timedelta
 from statistics import median
@@ -370,6 +371,22 @@ def tool_fetch_limit_up_stocks(
     source_used = "cache"
     broken_count = 0
 
+    spacing_cfg: Dict[str, Any] | None = None
+    try:
+        from src.config_loader import load_system_config
+
+        spacing_cfg = load_system_config(use_cache=True)
+    except Exception:
+        spacing_cfg = None
+    try:
+        from plugins.utils.upstream_spacing import sleep_limit_up_between_pools
+    except Exception:
+
+        def sleep_limit_up_between_pools(_cfg: Dict[str, Any] | None, *, after_step: int) -> None:  # type: ignore[no-redef]
+            if after_step >= 1:
+                time.sleep(0.35)
+
+    chain_step = 0
     for d in dates:
         intraday_mode = _is_same_day_intraday(d)
         # approved chain: em -> previous -> strong -> sub_new -> cache
@@ -394,6 +411,8 @@ def tool_fetch_limit_up_stocks(
                 {"source": "akshare.stock_zt_pool_em", "ok": False, "message": em_err or f"empty:{d}"}
             )
 
+        chain_step += 1
+        sleep_limit_up_between_pools(spacing_cfg, after_step=chain_step)
         prev_df, prev_err = _fetch_pool_df("stock_zt_pool_previous_em", d)
         if prev_df is not None and not prev_df.empty:
             attempts.append({"source": "akshare.stock_zt_pool_previous_em", "ok": True, "message": d})
@@ -407,6 +426,8 @@ def tool_fetch_limit_up_stocks(
                 {"source": "akshare.stock_zt_pool_previous_em", "ok": False, "message": prev_err or f"empty:{d}"}
             )
 
+        chain_step += 1
+        sleep_limit_up_between_pools(spacing_cfg, after_step=chain_step)
         strong_df, strong_err = _fetch_pool_df("stock_zt_pool_strong_em", d)
         if strong_df is not None and not strong_df.empty:
             attempts.append({"source": "akshare.stock_zt_pool_strong_em", "ok": True, "message": d})
@@ -427,6 +448,8 @@ def tool_fetch_limit_up_stocks(
                 {"source": "akshare.stock_zt_pool_strong_em", "ok": False, "message": strong_err or f"empty:{d}"}
             )
 
+        chain_step += 1
+        sleep_limit_up_between_pools(spacing_cfg, after_step=chain_step)
         sub_df, sub_err = _fetch_pool_df("stock_zt_pool_sub_new_em", d)
         if sub_df is not None and not sub_df.empty:
             attempts.append({"source": "akshare.stock_zt_pool_sub_new_em", "ok": True, "message": d})
