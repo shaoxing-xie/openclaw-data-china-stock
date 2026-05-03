@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-05-03 (v0.5.10)
+
+### ClawHub 发布
+
+- 数据底座演进：实体/L4/catalog 相关工具与契约、`factor_registry`、文档与测试（详见本版本 `git` 历史）。
+- README：补充 L1–L4-data 分层、健康观测、`tool_runner` 命令行示例与 `docs/data_model/` 等索引。
+
 ## 2026-04-28 (v0.5.5)
 
 ### Major: CNI + CSIndex daily collectors + release hygiene
