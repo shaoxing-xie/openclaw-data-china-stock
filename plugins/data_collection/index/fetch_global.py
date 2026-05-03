@@ -116,7 +116,8 @@ def _fetch_akshare_us_index_sina_rows(yf_symbols: List[str]) -> List[Dict[str, A
 
 FMP_QUOTE_URL = "https://financialmodelingprep.com/stable/quote"
 DEFAULT_THROTTLE_POLICY: Dict[str, Dict[str, Any]] = {
-    "yfinance": {"min_interval_sec": 0.3, "fast_timeout_sec": 4, "slow_timeout_sec": 8, "retry_budget": 1},
+    # Chart 轮询 + 多标的 batch 易触发 Yahoo 429；略抬高默认节拍（仍可由 config 覆盖）
+    "yfinance": {"min_interval_sec": 0.85, "fast_timeout_sec": 4, "slow_timeout_sec": 8, "retry_budget": 1},
     "fmp": {"min_interval_sec": 0.8, "timeout_sec": 18, "retry_budget": 2, "backoff_sec": 0.7},
     "sina": {"min_interval_sec": 0.3, "timeout_sec": 10, "retry_budget": 0},
 }
