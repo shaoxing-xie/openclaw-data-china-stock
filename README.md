@@ -34,6 +34,27 @@
 
 这个项目的目标是将上述问题收敛为一个可复用、可扩展、可直接被 Agent 调用的插件层。
 
+## 数据分层速览（L1 / L2 / L3 / L4-data）
+
+下表便于与宿主「统一数据层」文档对照；**细则与契约以 `docs/data_model/`、`docs/schemas/` 为准**（README 不重复长文）。
+
+| 层级 | 在本插件中的含义 | 典型工具 / 模块 |
+|------|------------------|----------------|
+| **L1** | 原始采集、Provider 编排、append-only 风格落盘 | `tool_fetch_market_data`、`tool_fetch_index_data`（含 `global_spot`）、`tool_read_market_data` 等 |
+| **L2** | 实体解析、静态/主数据卡片 | `tool_resolve_symbol`、`tool_get_entity_meta`（`plugins/data_collection/entity/`） |
+| **L3** | 特征、聚合、门闸类产出（研究/决策向） | 多因子选股、情绪四工具、轮动 `tool_etf_rotation_research` 等 |
+| **L4-data** | 确定性估值快照（**非投资建议**，结构化字段 + `_meta`） | `tool_l4_valuation_context`、`tool_l4_pe_ttm_percentile`；Schema：`docs/schemas/valuation_context_v1.schema.json`、`docs/schemas/pe_ttm_percentile_band_v1.schema.json` |
+
+**因子与 catalog 运行时对齐**：`config/factor_registry.yaml` + `plugins/utils/plugin_data_registry.py`（说明见 `docs/data_model/catalog_runtime_alignment.md`）。
+
+## 数据源健康与可观测
+
+- **探针工具**：`tool_probe_source_health`（`write_snapshot=true` 时写入 `data/meta/source_health_snapshot.json`，并维护 `data/meta/source_health_history_rollup.json` 等趋势文件）。
+- **只读 digest**：`tool_plugin_catalog_digest`；**attempts 聚合**：`tool_summarize_attempts`。
+- **全球指数 spot**：`tool_fetch_global_index_spot` 等返回中可含 `source_route`（含 **`catalog_merge`**、**`active_priority`**）、`attempts`、`elapsed_ms` 等排障字段。
+
+宿主 **etf-options-ai-assistant** 的 Chart Console 通过 HTTP 只读消费上述快照（见对方 `README.md` 与 `docs/data-source-contract.md`）。
+
 ## 核心能力
 
 ### 1) 全资产行情采集
@@ -202,6 +223,23 @@ export TUSHARE_TOKEN="your_tushare_token"
 - “请给出贵州茅台基本面四维评分和估值偏离。”
 - “请对 510300 的均线策略做回测评估，并说明当前是 MVP 模式限制。”
 
+## 命令行快速验证（`tool_runner.py`）
+
+在仓库根目录、已激活 `.venv` 的前提下，可直接跑工具 JSON（与 OpenClaw / CI 一致）：
+
+```bash
+# 实体解析（L2）
+.venv/bin/python tool_runner.py tool_resolve_symbol '{"symbol":"sh600519"}'
+
+# L4 估值上下文（示例标的；需上游数据可用）
+.venv/bin/python tool_runner.py tool_l4_valuation_context '{"stock_code":"600519","trade_date":""}'
+
+# 数据源健康探针（写快照需显式打开写盘参数，详见工具 manifest）
+.venv/bin/python tool_runner.py tool_probe_source_health '{"write_snapshot":true}'
+```
+
+Agent 会话内则通过 OpenClaw 注册的同名 `tool_*` 调用即可。
+
 ## 文档导航
 
 - 安装与部署：`INSTALL.md`
@@ -218,6 +256,11 @@ export TUSHARE_TOKEN="your_tushare_token"
   - `docs/macro/api_contract.md`
   - `docs/macro/error_codes.md`
   - `docs/macro/dq_policy.md`
+- **数据模型与实体 / meta 契约**：`docs/data_model/`（`entity_id.md`、`meta_contract.md`、`catalog_runtime_alignment.md`）
+- **跨仓契约对齐清单（宿主 ↔ 插件）**：`docs/cross_repo/assistant_schema_sync_checklist.md`
+- **JSON Schema（L4 等）**：`docs/schemas/`
+- **多 Skill 编排说明**：`docs/skills/multi_skill_orchestration.md`
+- **并发与上游运维注意**：`docs/operations/max_concurrent_upstream.md`
 - 版本发布记录：`CHANGELOG.md`
 - `v0.5.2` 发布纪要：`docs/release/v0.5.2.md`
 - 与 **etf-options-ai-assistant** 的集成与契约演进：见对方仓库 **`docs/integration/plugin_assistant_integration_plan.md`**
