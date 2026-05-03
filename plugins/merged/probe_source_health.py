@@ -5,7 +5,12 @@ from __future__ import annotations
 import uuid
 from typing import Any, Dict, List, Optional
 
-from plugins.utils.source_health import append_source_event, write_snapshot as persist_snapshot_to_disk
+from plugins.utils.error_codes import ErrorCode, QualityStatus
+from plugins.utils.source_health import (
+    append_probe_history_sample,
+    append_source_event,
+    write_snapshot as persist_snapshot_to_disk,
+)
 
 
 def _parse_ids(raw: Optional[str]) -> List[str]:
@@ -44,19 +49,38 @@ def tool_probe_source_health(
         except Exception as e:
             ok = False
             detail = str(e)[:200]
-        rows.append({"source_id": sid, "ok": ok, "detail": detail})
+        row: Dict[str, Any] = {"source_id": sid, "ok": ok, "detail": detail}
+        if not ok:
+            row["error_code"] = ErrorCode.PLUGIN_UNAVAILABLE
+        rows.append(row)
 
     rid = str(uuid.uuid4())
     if write_snapshot:
-        path = persist_snapshot_to_disk(rows, run_id=rid)
-        append_source_event(
-            {
-                "event": "source_health_probe",
+        try:
+            path = persist_snapshot_to_disk(rows, run_id=rid)
+            append_source_event(
+                {
+                    "event": "source_health_probe",
+                    "run_id": rid,
+                    "source_ids": ids,
+                    "success": True,
+                }
+            )
+            append_probe_history_sample(rows, rid)
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"snapshot_write_failed: {e}",
+                "error_code": ErrorCode.UPSTREAM_FETCH_FAILED,
                 "run_id": rid,
-                "source_ids": ids,
-                "success": True,
+                "data": rows,
+                "_meta": {
+                    "schema_name": "tool_probe_source_health",
+                    "schema_version": "1",
+                    "quality_status": QualityStatus.ERROR,
+                    "error_code": ErrorCode.UPSTREAM_FETCH_FAILED,
+                },
             }
-        )
         return {
             "success": True,
             "message": "snapshot_written",

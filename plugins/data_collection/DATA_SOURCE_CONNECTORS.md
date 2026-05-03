@@ -47,7 +47,7 @@ It complements (does not replace):
 | `tool_fetch_index_data` (non-`global_spot`) | Yes when sub-route wraps `with_source_meta` | Usually partial | `success`, `source`/`source_id` when present, `message` on failure | Merged router; per-`data_type` delegates to `fetch_*` |
 | `tool_fetch_index_data` (`data_type=global_spot`) | **Yes** (`source_stage=derived` on multi-source success) | **Yes** (`attempts`) | **`source_stage` + `attempts` (+ `sources_used`)**; do not judge by `source_id` alone | `mixed` / composite `source_raw` may yield `source_id=unknown` via `canonical_source_id` |
 | `tool_fetch_limit_up_stocks` | Via normalized payload / `source` string | **Yes** (`normalize_contract`) | `success`, `error_code`, `attempts`, `quality_gate` | Quality gate failures use `UPSTREAM_FETCH_FAILED` |
-| `tool_read_market_data` | N/A (plugin cache read path uses `read_cache_data` dict) | No `normalize_contract` in **plugin** thin reader | `success`, `missing_dates`, `message` / records | **Assistant** fork may embed online refill — tech debt (**P0-cache**) |
+| `tool_read_market_data` | N/A (cache read via `read_cache_data`) | **Yes** (`error_code`, `_meta.quality_status` on failures; multi-type partial → `degraded`) | `success`, `error_code`, `_meta.quality_status`, `missing_dates` / records | 插件 `plugins/merged/read_market_data.py` 已与助手对齐契约字段 |
 
 **Future rows**: extend the same table for `tool_fetch_etf_data`, `tool_fetch_a50_data`, northbound, fund flow, stock minute, etc., during P1 connector migration.
 
@@ -108,7 +108,26 @@ Until linked, mark `schema_link: TODO` in future extended rows (optional column 
 
 ---
 
+## 10) Failure response contract (`error_code`)
+
+Canonical enum strings live in **`plugins/utils/error_codes.py`** (`ErrorCode` / `QualityStatus`). Assistant SSOT for human-readable descriptions: **`data/meta/error_codes.yaml`** (etf-options-ai-assistant).
+
+| Field | When present | Notes |
+| --- | --- | --- |
+| `success` | Always | `false` on hard tool failure |
+| `error_code` | On failure | One of `UPSTREAM_FETCH_FAILED`, `RATE_LIMITED`, `INVALID_PARAMS`, `NO_DATA`, `PLUGIN_UNAVAILABLE`, `CACHE_MISS` |
+| `quality_status` | Recommended | `ok` / `degraded` / `error` (see YAML `quality_status.enum`) |
+| `_meta.error_code` | Optional | Mirror top-level for L4 readers |
+| `message` | Optional | Human text; must not replace `error_code` |
+
+**`tool_read_market_data`**: invalid args → `INVALID_PARAMS`; cache partial / cache miss paths → `CACHE_MISS` (may carry `quality_status=degraded`); empty or unknown failure → `NO_DATA`; upstream/read failure with message → `UPSTREAM_FETCH_FAILED`. Multi-type partial success → `quality_status=degraded`, `error_code=UPSTREAM_FETCH_FAILED`.
+
+**`tool_probe_source_health`**: per-row import failure → row `error_code=PLUGIN_UNAVAILABLE` (with `ok=false`); snapshot persistence exception → top-level `success=false`, `error_code=UPSTREAM_FETCH_FAILED`, `_meta.quality_status=error`. Dry-run / successful snapshot → `success=true` (rows may still carry `error_code` on failed probes).
+
+---
+
 ## 9) Changelog
 
 - **2026-05-02**: Initial文件（P0-surface Q+R）：业务映射 + 双轨矩阵种子。
 - **2026-05-02**：§5–§8 增补（S/T 草案、`unknown` 模板、矩阵行、A50 技术债指针）。
+- **2026-05-03**：§10 失败体 `error_code` 契约 + `tool_read_market_data` / `tool_probe_source_health` 说明。

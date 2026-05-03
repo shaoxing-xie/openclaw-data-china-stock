@@ -5,6 +5,12 @@ def test_tool_probe_source_health_dry_run():
     out = tool_probe_source_health(write_snapshot=False)
     assert out.get("success") is True
     assert isinstance(out.get("data"), list)
+    for row in out.get("data") or []:
+        assert "source_id" in row
+        assert "ok" in row
+        assert "detail" in row
+        if row.get("ok") is False:
+            assert row.get("error_code") == "PLUGIN_UNAVAILABLE"
 
 
 def test_tool_probe_source_health_writes_snapshot(tmp_path, monkeypatch):

@@ -36,7 +36,7 @@ class TestToolRunnerDispatch(unittest.TestCase):
     def test_tool_map_retarget_to_wrapper(self):
         module = _load_tool_runner_module()
         self.assertEqual(module.TOOL_MAP["tool_fetch_market_data"].module_path, "data.fetch_market_data")
-        self.assertEqual(module.TOOL_MAP["tool_read_market_data"].module_path, "data.read_market_data")
+        self.assertEqual(module.TOOL_MAP["tool_read_market_data"].module_path, "merged.read_market_data")
         self.assertEqual(
             module.TOOL_MAP["tool_probe_source_health"].module_path,
             "merged.probe_source_health",

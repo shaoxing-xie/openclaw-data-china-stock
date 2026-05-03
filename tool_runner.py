@@ -221,7 +221,7 @@ TOOL_MAP: Dict[str, ToolSpec] = {
     ),
     # 合并工具 - 数据访问
     "tool_read_market_data": ToolSpec(
-        module_path="data.read_market_data",
+        module_path="merged.read_market_data",
         function_name="tool_read_market_data",
     ),
     "tool_probe_source_health": ToolSpec(

@@ -104,6 +104,13 @@ OPENCLAW_DATA_CHINA_STOCK_ROOT="${HOME}/.openclaw/extensions/openclaw-data-china
 
 同步后请固定解释器（第 5 节）并重启 Gateway。
 
+## 7.5 数据源健康探针与落盘路径
+
+- **工具**：`tool_probe_source_health(write_snapshot=true)` 写入快照 `data/meta/source_health_snapshot.json`（若设置 **`OPENCLAW_DATA_DIR`**，则为 `$OPENCLAW_DATA_DIR/meta/`）。
+- **事件**：`data/logs/source_events.jsonl`（探针事件与其它 source 事件）。
+- **趋势**：每次快照成功后追加 `data/logs/source_health_probe_history.jsonl` 采样，并刷新聚合文件 `data/meta/source_health_history_rollup.json`（供助手 Chart Console `GET /api/semantic/data_source_health_history` 只读展示）。历史 JSONL 体积过大时会自动截断尾部保留。
+- **干跑**：`write_snapshot=false` 不写盘、不写趋势采样。
+
 ## 8. 常见问题
 
 - **出现 `TA-Lib 与 pandas-ta 均不可用`**
