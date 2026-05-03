@@ -285,6 +285,42 @@ TOOL_MAP: Dict[str, ToolSpec] = {
         module_path="plugins.analysis.etf_rotation_research",
         function_name="tool_etf_rotation_research",
     ),
+    "tool_resolve_symbol": ToolSpec(
+        module_path="plugins.data_collection.entity.entity_tools",
+        function_name="tool_resolve_symbol",
+    ),
+    "tool_batch_resolve_symbol": ToolSpec(
+        module_path="plugins.data_collection.entity.entity_tools",
+        function_name="tool_batch_resolve_symbol",
+    ),
+    "tool_get_entity_meta": ToolSpec(
+        module_path="plugins.data_collection.entity.entity_tools",
+        function_name="tool_get_entity_meta",
+    ),
+    "tool_get_index_constituents": ToolSpec(
+        module_path="plugins.data_collection.entity.entity_tools",
+        function_name="tool_get_index_constituents",
+    ),
+    "tool_get_etf_holdings": ToolSpec(
+        module_path="plugins.data_collection.entity.entity_tools",
+        function_name="tool_get_etf_holdings",
+    ),
+    "tool_l4_valuation_context": ToolSpec(
+        module_path="plugins.analysis.l4_data_tools",
+        function_name="tool_l4_valuation_context",
+    ),
+    "tool_l4_pe_ttm_percentile": ToolSpec(
+        module_path="plugins.analysis.l4_data_tools",
+        function_name="tool_l4_pe_ttm_percentile",
+    ),
+    "tool_summarize_attempts": ToolSpec(
+        module_path="plugins.utils.attempts_rollup",
+        function_name="tool_summarize_attempts",
+    ),
+    "tool_plugin_catalog_digest": ToolSpec(
+        module_path="plugins.utils.catalog_digest_tool",
+        function_name="tool_plugin_catalog_digest",
+    ),
     "tool_calculate_sector_rps": ToolSpec(
         module_path="plugins.analysis.rps_engine",
         function_name="tool_calculate_sector_rps",
@@ -614,6 +650,10 @@ TOOL_MAP: Dict[str, ToolSpec] = {
     "tool_screen_equity_factors": ToolSpec(
         module_path="plugins.analysis.equity_factor_screening",
         function_name="tool_screen_equity_factors",
+    ),
+    "tool_screen_by_factors": ToolSpec(
+        module_path="plugins.analysis.equity_factor_screening",
+        function_name="tool_screen_by_factors",
     ),
     # 回测
     "tool_backtest_limit_up_pullback": ToolSpec(

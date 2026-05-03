@@ -42,8 +42,17 @@ triggers:
 3. 资产含义（风格偏好，不给执行性交易指令）
 4. 风险与反证（与主结论冲突的数据、失效条件）
 
+### 证据表（必选）
+
+- 列出 `tool_fetch_macro_data` / `tool_fetch_macro_snapshot` 等调用与 `quality_status`；指标数值须对应工具输出字段。
+
+### 反证与局限（必选）
+
+- 数据修订、频率错配、单指标噪声对结论的影响。
+
 ## 强制规则
 
+- 仅通过 **manifest / `tool_runner`** 调用依赖工具，禁止引导直连 `plugins.data_collection`。
 - 先取数后解读，禁止先入为主叙事。
 - 必须引用证据：增长/通胀/信用至少各 1 个指标。
 - 当关键字段缺失时输出 `insufficient_evidence`。
@@ -52,6 +61,7 @@ triggers:
 
 ## 依赖工具
 
+- `tool_resolve_symbol`（L2；宏观叙事需挂靠指数/期货等代码时可选）
 - `tool_fetch_macro_data`（统一入口，推荐）
 - `tool_fetch_macro_snapshot`（快照入口）
 - 兼容入口：`tool_fetch_macro_*`

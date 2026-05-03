@@ -80,6 +80,7 @@ def tool_calculate_technical_indicators(
             }
 
         sel = TechnicalIndicatorEngine.select(engine_preference=engine_preference)
+        catalog_engine_order = TechnicalIndicatorEngine.catalog_auto_engine_order()
         df = calculate_p0_indicators(raw_df, sel.name, sel.talib, sel.pandas_ta)
         alignment_applied = apply_alignment(df, alignment=alignment)
         data = _to_output(df, return_mode=return_mode)
@@ -102,6 +103,8 @@ def tool_calculate_technical_indicators(
                 "calculated_indicators": _p0_p1_indicator_list(),
                 "alignment_applied": alignment_applied,
                 "factor_hooks": factor_hooks(latest if isinstance(latest, dict) else {}),
+                "catalog_engine_order": catalog_engine_order,
+                "catalog_dataset_id": "technical_indicators",
             },
             "warnings": _engine_warning(sel.name, engine_preference),
             "error": None,

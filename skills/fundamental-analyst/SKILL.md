@@ -37,8 +37,17 @@ triggers:
 3. 估值与同业偏离
 4. 综合评分与风险反证
 
+### 证据表（必选）
+
+- 列出 `tool_fetch_stock_financials` / `tool_fetch_stock_financial_reports` / `tool_fetch_market_data`（`view=valuation_snapshot`）等调用与 `quality_status`；PE/PB/ROE 等须对应工具 JSON 字段。
+
+### 反证与局限（必选）
+
+- 报表滞后、估值源降级、缺失同业样本时的结论降置信。
+
 ## 强制规则
 
+- 仅通过 **manifest / `tool_runner`** 调用依赖工具，禁止引导直连 `plugins.data_collection`。
 - 先校验字段完整性，不足时输出 `insufficient_evidence`。
 - 估值结论必须同时包含历史分位与同业偏离。
 - 禁止输出买卖点、仓位比例、杠杆建议。
@@ -49,6 +58,8 @@ triggers:
 - `tool_fetch_stock_financials`
 - `tool_fetch_stock_financial_reports`
 - `tool_fetch_market_data`（`view=valuation_snapshot`）
+- `tool_l4_valuation_context`（L4-data；与财务字段并列取数时优先引用其 `_meta` / `metrics`）
+- `tool_l4_pe_ttm_percentile`（L4-data；报告期 PE 历史分位，可选）
 
 ## 通用输出字段
 

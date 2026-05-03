@@ -67,11 +67,12 @@
 
 ### 4) 多因子选股（A 股）
 
-- 工具：`tool_screen_equity_factors`（`plugins/analysis/equity_factor_screening.py`；manifest / `tool_runner` 已注册）
+- 工具：`tool_screen_equity_factors`；**等价别名** `tool_screen_by_factors`（同一实现与参数信封，便于宿主工作流统一 manifest id）
+- 实现：`plugins/analysis/equity_factor_screening.py`；manifest / `tool_runner` 已注册
 - 批量：`tool_batch_fetch` 白名单含上述工具（`plugins/merged/tool_batch_fetch.py`）
 - 申万一级静态映射：`config/sw_industry_level1_mapping.json` ← `scripts/update_sw_industry_level1_mapping.py`
 - 契约与测试：`docs/schemas/tool_screen_equity_factors.schema.json`、`tests/test_tool_screen_equity_factors_contract.py`
-- 与 **etf-options-ai-assistant** 协同：夜盘收尾与熔断工具、规程 Skill `ota_equity_factor_screening_brief` 在该仓配置（见该仓 `config/tools_manifest.yaml`、`skills/ota-equity-factor-screening-brief/`）
+- 与 **etf-options-ai-assistant** 协同：夜盘收尾 `tool_finalize_screening_nightly`、规程 Skill `ota_equity_factor_screening_brief` 在该仓配置（见该仓 `config/tools_manifest.yaml`、`skills/ota-equity-factor-screening-brief/`）；集成总览见该仓 **`docs/integration/plugin_assistant_integration_plan.md`**
 
 ### 5) Skill 能力层（v0.5.0+）
 
@@ -120,6 +121,21 @@
 - `config/tools_manifest.json` + `tool_runner.py` 统一路由
 - 支持开发态快速注册：`scripts/register_openclaw_dev.py`
 - 解释器解析优先级明确，便于跨环境部署
+
+### 8) 与交易助手（etf-options-ai-assistant）协同
+
+宿主仓库通过 **`plugins/data_collection` 符号链接** 或环境变量 **`OPENCLAW_CHINA_STOCK_PLUGIN_ROOT`** / **`OPENCLAW_DATA_CHINA_STOCK_REPO`** 指向本仓库，复用本插件的采集与部分分析工具；宿主侧用 **`plugins/china_stock_upstream.py`** 对 `equity_factor_screening`、`l4_data_tools` 等模块做 **临时 sys.path 注入**（勿在宿主 `plugins/utils/` 下新增会遮蔽本插件 `plugins.utils` 的薄封装）。
+
+已对宿主暴露或与之对齐的能力要点：
+
+| 能力 | 说明 |
+|------|------|
+| **全球指数 spot** | `tool_fetch_global_index_spot` / `fetch_global_index_spot` 响应含 `source_route`（含 **`catalog_merge`**、**`active_priority`**）；宿主在运维环境变量 **`OPTION_TRADING_ASSISTANT_DEBUG_PLUGIN_CATALOG=1`** 下可将上述字段透出到 Chart / 报告诊断 |
+| **L4 估值** | `tool_l4_valuation_context`、`tool_l4_pe_ttm_percentile`；宿主 Chart Console 提供只读 HTTP 视图并落盘 `data/semantic/l4_*` |
+| **观测** | `tool_plugin_catalog_digest`、`tool_summarize_attempts` |
+| **选股** | `tool_screen_by_factors` 与 `tool_screen_equity_factors` 等价 |
+
+**真源文档（宿主仓）**：`etf-options-ai-assistant/docs/integration/plugin_assistant_integration_plan.md`。
 
 ## 快速开始
 
@@ -204,6 +220,7 @@ export TUSHARE_TOKEN="your_tushare_token"
   - `docs/macro/dq_policy.md`
 - 版本发布记录：`CHANGELOG.md`
 - `v0.5.2` 发布纪要：`docs/release/v0.5.2.md`
+- 与 **etf-options-ai-assistant** 的集成与契约演进：见对方仓库 **`docs/integration/plugin_assistant_integration_plan.md`**
 
 ## 兼容性与已知限制
 

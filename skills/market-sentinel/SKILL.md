@@ -45,8 +45,17 @@ triggers:
 3. 数据完整性比例与（如有）降级说明
 4. 行动倾向框架与置信带
 
+### 证据表（必选）
+
+- 列出四依赖工具调用与各自 `quality_status`；综合分须能回溯到各子分数来源。
+
+### 反证与局限（必选）
+
+- 四源矛盾、某一源 `degraded` 时对综合分的稀释说明。
+
 ## 强制规则
 
+- 仅通过 **manifest / `tool_runner`** 调用依赖工具，禁止引导直连 `plugins.data_collection`。
 - **必须并行调用**四个依赖工具（异步/并发），禁止为省事串行阻塞；聚合结果可按 `config/market-sentinel_config.yaml` 的短 TTL 缓存复用。
 - 核心证据不足以支撑结论时，输出 `insufficient_evidence` 并说明缺失项。
 - 禁止输出具体买卖点、仓位比例、杠杆建议。
@@ -54,6 +63,7 @@ triggers:
 
 ## 依赖工具
 
+- `tool_resolve_symbol`（L2；代码混合格式时）
 - `tool_fetch_limit_up_stocks`
 - `tool_fetch_a_share_fund_flow`
 - `tool_fetch_northbound_flow`

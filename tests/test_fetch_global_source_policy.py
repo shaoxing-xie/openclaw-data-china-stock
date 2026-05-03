@@ -25,6 +25,7 @@ def test_fetch_global_returns_route_and_observability(monkeypatch):
     assert result["quality"] == "ok"
     assert result["source_route"]["metric"] == "global.index.default"
     assert result["source_route"]["route"] == ["yfinance", "fmp", "sina"]
+    assert result["source_route"].get("catalog_merge", {}).get("merge_mode")
     assert isinstance(result["elapsed_ms"], int)
     assert result["attempts"][0]["source_id"] == "yfinance"
 
@@ -45,7 +46,16 @@ def test_fetch_global_fmp_key_missing_failure_code(monkeypatch):
     assert result["attempts"][0]["failure_code"] == "CONFIG_MISSING_KEY"
 
 
+def test_merge_global_index_spot_reorders_within_config():
+    from plugins.utils.plugin_data_registry import merge_global_index_spot_priority
+
+    merged, meta = merge_global_index_spot_priority(["fmp", "yfinance", "sina"])
+    assert meta.get("merge_mode") == "catalog_first_then_config_remainder"
+    assert merged[0] == "yfinance"
+    assert set(merged) == {"yfinance", "fmp", "sina"}
+
+
 def test_fetch_global_throttle_policy_defaults():
     policy = fetch_global._source_policy({}, "yfinance")
-    assert policy["min_interval_sec"] == 0.3
+    assert policy["min_interval_sec"] == 0.85
     assert policy["retry_budget"] == 1

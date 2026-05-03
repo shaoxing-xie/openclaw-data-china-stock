@@ -35,8 +35,17 @@ triggers:
 3. 板块与个股资金聚集
 4. 连续性与反证
 
+### 证据表（必选）
+
+- 列出 `tool_fetch_a_share_fund_flow` / `tool_fetch_northbound_flow` / `tool_fetch_sector_data` 等调用与 `quality_status`；关键净流入等数值须对应工具 JSON 字段。
+
+### 反证与局限（必选）
+
+- 单日脉冲 vs 多日均值、上游降级对结论的影响；不得臆测补数。
+
 ## 强制规则
 
+- 仅通过 **manifest / `tool_runner`** 调用依赖工具，禁止引导直连 `plugins.data_collection`。
 - 对“单日”与“连续性(3/5/20日)”结论分开表达。
 - 无法构成连续性证据时输出 `insufficient_evidence`。
 - 禁止输出买卖点、仓位比例、杠杆建议。
@@ -44,6 +53,7 @@ triggers:
 
 ## 依赖工具
 
+- `tool_resolve_symbol`（L2；个股代码归一）
 - `tool_fetch_a_share_fund_flow`
 - `tool_fetch_northbound_flow`
 - `tool_fetch_sector_data`

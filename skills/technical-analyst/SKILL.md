@@ -40,8 +40,18 @@ triggers:
 3. 波动与形态（BOLL、ATR、K线形态）
 4. 综合评分与风险反证
 
+### 证据表（必选）
+
+- 列出本次分析调用的 `tool_*` 及各自 `success` / `quality_status`（或等价字段）。
+- **关键数值**（如 RSI、MACD）须对应工具 JSON 中的字段名或附录快照，不得仅出现在自由叙述中而无出处。
+
+### 反证与局限（必选）
+
+- 说明数据缺口、上游降级、`degraded` 对结论的影响；不得用臆测填补缺失数据。
+
 ## 强制规则
 
+- 仅通过 **OpenClaw 工具清单 / `tool_runner`** 调用 `tool_calculate_technical_indicators` 等 manifest 工具取数，**禁止**引导直连 `plugins.data_collection` 实现。
 - 先调用工具取数，后解读。
 - 至少引用趋势/动量/波动各 1 项证据。
 - 缺少关键字段时输出 `insufficient_evidence`。
@@ -52,6 +62,9 @@ triggers:
 
 - `tool_calculate_technical_indicators`（主入口）
 - `tool_fetch_market_data`（补充行情上下文）
+- `tool_resolve_symbol`（L2 代码归一，可选）
+- `tool_l4_valuation_context`（L4-data 估值上下文；与技术面并行取数时用于客观估值字段）
+- `tool_l4_pe_ttm_percentile`（L4-data；报告期 PE_TTM 历史分位，可选与估值上下文并列）
 
 ## 通用输出字段
 

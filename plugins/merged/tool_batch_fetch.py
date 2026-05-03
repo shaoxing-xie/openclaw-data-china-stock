@@ -29,6 +29,7 @@ _BATCH_IMPORTS = {
         "tool_calculate_technical_indicators",
     ),
     "tool_screen_equity_factors": ("plugins.analysis.equity_factor_screening", "tool_screen_equity_factors"),
+    "tool_screen_by_factors": ("plugins.analysis.equity_factor_screening", "tool_screen_by_factors"),
     "tool_fetch_a_share_technical_screener": (
         "plugins.data_collection.a_share_technical_screener",
         "tool_fetch_a_share_technical_screener",

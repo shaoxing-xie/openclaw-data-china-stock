@@ -17,6 +17,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
+from plugins.utils.plugin_data_registry import list_screenable_factor_ids
+
 logger = logging.getLogger(__name__)
 
 PLUGIN_VERSION = "0.5.3"
@@ -27,7 +29,7 @@ INDEX_UNIVERSE = {
     "zz1000": "000852",
 }
 
-ALLOWED_FACTORS = frozenset({"reversal_5d", "fund_flow_3d", "sector_momentum_5d"})
+ALLOWED_FACTORS = frozenset(list_screenable_factor_ids())
 
 
 def _plugin_version() -> str:
@@ -421,6 +423,14 @@ def tool_screen_equity_factors(
 
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
 
+    reg_sv = None
+    try:
+        from plugins.utils.plugin_data_registry import load_registry
+
+        reg_sv = str(load_registry().get("schema_version") or "")
+    except Exception:
+        reg_sv = None
+
     return {
         "success": True,
         "message": "ok",
@@ -445,4 +455,12 @@ def tool_screen_equity_factors(
             "hit": hit,
             "total": tot,
         },
+        "data_registry_schema_version": reg_sv,
     }
+
+
+def tool_screen_by_factors(*args: Any, **kwargs: Any) -> Dict[str, Any]:
+    """
+    注册表/文档中的命名别名；行为与 ``tool_screen_equity_factors`` 完全一致。
+    """
+    return tool_screen_equity_factors(*args, **kwargs)

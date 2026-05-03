@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openclaw.local/schemas/valuation_context_v1.json",
+  "title": "tool_l4_valuation_context success payload",
+  "type": "object",
+  "required": ["success", "quality_status", "_meta", "data"],
+  "properties": {
+    "success": { "type": "boolean" },
+    "message": { "type": "string" },
+    "quality_status": { "type": "string", "enum": ["ok", "degraded", "error"] },
+    "_meta": {
+      "type": "object",
+      "required": ["schema_name", "data_layer", "task_id"],
+      "properties": {
+        "schema_name": { "const": "valuation_context_v1" },
+        "schema_version": { "type": "string" },
+        "data_layer": { "const": "L4_data" },
+        "task_id": { "type": "string" },
+        "lineage_refs": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "data": {
+      "type": "object",
+      "required": ["entity_id", "as_of_date", "metrics", "note"],
+      "properties": {
+        "entity_id": { "type": "string" },
+        "as_of_date": { "type": "string" },
+        "metrics": { "type": "object" },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}

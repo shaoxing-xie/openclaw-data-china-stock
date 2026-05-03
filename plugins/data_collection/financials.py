@@ -153,6 +153,81 @@ def _fetch_single_financials(symbol: str) -> Dict[str, Any]:
     return out
 
 
+def fetch_stock_pe_ttm_timeseries(symbol: str) -> Dict[str, Any]:
+    """
+    东方财富「按报告期」财务指标表中的 PE_TTM 时间序列（季度粒度为主），供 L4 分位等工具复用。
+    """
+    sym_list = _normalize_symbols(symbol)
+    out: Dict[str, Any] = {
+        "symbol": sym_list[0] if sym_list else "",
+        "points": [],
+        "success": False,
+        "error": None,
+    }
+    if not sym_list:
+        out["error"] = "symbols 不能为空"
+        return out
+    if not AKSHARE_AVAILABLE:
+        out["error"] = "AkShare 未安装"
+        return out
+    em_symbol = _to_em_symbol(sym_list[0])
+    df = None
+    try:
+        if hasattr(ak, "stock_financial_analysis_indicator_em"):
+            df = ak.stock_financial_analysis_indicator_em(  # type: ignore[attr-defined]
+                symbol=em_symbol,
+                indicator="按报告期",
+            )
+    except Exception as e:  # noqa: BLE001
+        logger.debug("stock_financial_analysis_indicator_em %s 失败: %s", em_symbol, e)
+        out["error"] = str(e)
+        return out
+    if df is None or df.empty:
+        out["error"] = "无财务数据"
+        return out
+
+    report_date_col = None
+    for col in ["REPORT_DATE", "报告期", "REPORT_DATE_CN", "report_date"]:
+        if col in df.columns:
+            report_date_col = col
+            break
+    if report_date_col is None:
+        out["error"] = "无报告期列"
+        return out
+
+    pe_cols = ["PE_TTM", "市盈率TTM", "市盈率(TTM)", "PE", "市盈率"]
+    pe_col = next((c for c in pe_cols if c in df.columns), None)
+    if pe_col is None:
+        out["error"] = "无 PE 列"
+        return out
+
+    try:
+        import pandas as pd
+
+        work = df[[report_date_col, pe_col]].copy()
+        work["_dt"] = pd.to_datetime(work[report_date_col], errors="coerce")
+        work = work[work["_dt"].notna()]
+        work = work.sort_values("_dt")
+        points: List[Dict[str, Any]] = []
+        for _, row in work.iterrows():
+            pev = _safe_float(row.get(pe_col))
+            if pev is None or not (pev == pev):
+                continue
+            points.append(
+                {
+                    "report_date": str(row.get(report_date_col) or "")[:32],
+                    "pe_ttm": float(pev),
+                }
+            )
+        out["points"] = points
+        out["success"] = bool(points)
+        if not points:
+            out["error"] = "无有效 PE 点"
+    except Exception as e:  # noqa: BLE001
+        out["error"] = str(e)
+    return out
+
+
 def tool_fetch_stock_financials(
     symbols: Any,
     lookback_report_count: int = 1,

@@ -24,11 +24,14 @@ def tool_probe_source_health(
     source_ids: Optional[str] = None,
     *,
     write_snapshot: bool = False,
+    include_catalog_digest: bool = False,
     **_: Any,
 ) -> Dict[str, Any]:
     """
     Coarse health rows (import-level smoke). Set ``write_snapshot=true`` to persist
     ``data/meta/source_health_snapshot.json`` and append one JSONL event.
+
+    ``include_catalog_digest``: attach read-only ``factor_registry`` / ``source_chains`` summary (no network).
     """
     ids = _parse_ids(source_ids)
     rows: List[Dict[str, Any]] = []
@@ -81,11 +84,27 @@ def tool_probe_source_health(
                     "error_code": ErrorCode.UPSTREAM_FETCH_FAILED,
                 },
             }
-        return {
+        out: Dict[str, Any] = {
             "success": True,
             "message": "snapshot_written",
             "run_id": rid,
             "path": str(path),
             "data": rows,
         }
-    return {"success": True, "message": "dry_run", "run_id": rid, "data": rows}
+        if include_catalog_digest:
+            try:
+                from plugins.utils.catalog_digest_tool import tool_plugin_catalog_digest
+
+                out["catalog_digest"] = tool_plugin_catalog_digest().get("data")
+            except Exception as e:
+                out["catalog_digest_error"] = str(e)[:200]
+        return out
+    out_dry: Dict[str, Any] = {"success": True, "message": "dry_run", "run_id": rid, "data": rows}
+    if include_catalog_digest:
+        try:
+            from plugins.utils.catalog_digest_tool import tool_plugin_catalog_digest
+
+            out_dry["catalog_digest"] = tool_plugin_catalog_digest().get("data")
+        except Exception as e:
+            out_dry["catalog_digest_error"] = str(e)[:200]
+    return out_dry

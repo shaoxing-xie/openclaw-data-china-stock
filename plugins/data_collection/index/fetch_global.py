@@ -621,12 +621,24 @@ def fetch_global_index_spot(
     fmp_enabled = bool(fmp_cfg.get("enabled", True))
     fmp_keys = _resolve_fmp_api_keys(fmp_cfg) if fmp_enabled else []
 
+    try:
+        from plugins.utils.plugin_data_registry import merge_global_index_spot_priority
+
+        priority, catalog_merge = merge_global_index_spot_priority(priority)
+    except Exception:
+        catalog_merge = {"merge_mode": "error_fallback", "dataset_id": "global_index_spot"}
+
     by_symbol: Dict[str, Dict[str, Any]] = {}
     sources_used: List[str] = []
     notes: List[str] = []
     attempts: List[Dict[str, Any]] = []
     started = time.perf_counter()
-    route_policy = {"metric": "global.index.default", "route": GLOBAL_SPOT_FIXED_SOURCE_ROUTE["global.index.default"], "active_priority": priority}
+    route_policy = {
+        "metric": "global.index.default",
+        "route": GLOBAL_SPOT_FIXED_SOURCE_ROUTE["global.index.default"],
+        "active_priority": priority,
+        "catalog_merge": catalog_merge,
+    }
 
     ak_attempt_count = 0
     for src in priority:

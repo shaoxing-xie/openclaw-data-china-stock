@@ -101,6 +101,7 @@ OPENCLAW_DATA_CHINA_STOCK_ROOT="${HOME}/.openclaw/extensions/openclaw-data-china
 - `install_plugin_to_runtime.sh` 使用 `rsync` 同步到默认目标 `~/.openclaw/extensions/openclaw-data-china-stock`（可用环境变量 `OPENCLAW_DATA_CHINA_STOCK_RUNTIME` 覆盖）。
 - `register_openclaw_dev.py` 在未设置环境变量时，以**脚本所在仓库根**为插件根；设置 `OPENCLAW_DATA_CHINA_STOCK_ROOT` 后，**插件入口、`tool_runner.py`、`tools_manifest.json` 与 `skills/` 软链**均指向该目录。
 - 交易助手 workspace `etf-options-ai-assistant` 下各 Agent 的 `skills` 会幂等追加本插件提供的 Skill（含 `market-sentinel`）；四情绪工具由插件 manifest 暴露，需在 **数据采集 Agent 白名单**中包含（见 `etf-options-ai-assistant` 文档「A 股情绪工具与 market-sentinel」）。
+- 助手侧 **采集路径 / 动态加载 / L4 只读 HTTP / 运维可观测** 等与插件交叉的约定，以助手仓库 **`docs/integration/plugin_assistant_integration_plan.md`** 为单一真源（与本插件 `README.md`「与交易助手协同」一节互链）。
 
 同步后请固定解释器（第 5 节）并重启 Gateway。
 

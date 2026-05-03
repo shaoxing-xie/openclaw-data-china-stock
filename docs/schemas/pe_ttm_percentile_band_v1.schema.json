@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openclaw.local/schemas/pe_ttm_percentile_band_v1.json",
+  "title": "tool_l4_pe_ttm_percentile response",
+  "type": "object",
+  "required": ["success", "quality_status", "_meta", "data"],
+  "properties": {
+    "success": { "type": "boolean" },
+    "message": { "type": "string" },
+    "quality_status": { "type": "string", "enum": ["ok", "degraded", "error"] },
+    "_meta": {
+      "type": "object",
+      "required": ["schema_name", "data_layer", "task_id"],
+      "properties": {
+        "schema_name": { "const": "pe_ttm_percentile_band_v1" },
+        "schema_version": { "type": "string" },
+        "data_layer": { "const": "L4_data" },
+        "task_id": { "type": "string" },
+        "lineage_refs": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "data": {
+      "type": "object",
+      "required": ["entity_id", "window_years", "sample_size", "note"],
+      "properties": {
+        "entity_id": { "type": "string" },
+        "window_years": { "type": "integer", "minimum": 1 },
+        "pe_ttm_current": { "type": ["number", "null"] },
+        "percentile_0_100": { "type": ["number", "null"] },
+        "sample_size": { "type": "integer", "minimum": 0 },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}

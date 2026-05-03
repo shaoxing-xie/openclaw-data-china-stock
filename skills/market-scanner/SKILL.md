@@ -38,8 +38,17 @@ triggers:
 3. 异动监控（放量突破/冲高回落/炸板）
 4. 情绪状态与应对剧本
 
+### 证据表（必选）
+
+- 列出 `tool_check_trading_status`、`tool_fetch_market_data` 等调用与 `quality_status`；快照类结论须有工具字段对应。
+
+### 反证与局限（必选）
+
+- 时段边界、数据新鲜度 `data_freshness` 不足时对结论降置信。
+
 ## 强制规则
 
+- 仅通过 **manifest / `tool_runner`** 调用依赖工具，禁止引导直连 `plugins.data_collection`。
 - 盘中叙事前必须先调用 `tool_check_trading_status`。
 - 输出必须带 `event_window` 与 `data_freshness`。
 - 缺少核心行情或广度数据时输出 `insufficient_evidence`。
@@ -48,6 +57,7 @@ triggers:
 
 ## 依赖工具
 
+- `tool_resolve_symbol`（L2；标的代码归一，涉及个股/ETF/指数混输时优先）
 - `tool_check_trading_status`
 - `tool_fetch_market_data`
 - `tool_fetch_sector_data`

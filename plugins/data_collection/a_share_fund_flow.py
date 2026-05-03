@@ -281,6 +281,9 @@ def _run_chain(
     """
     按 provider 偏好重排后依次尝试；返回 (df, winning_tag, attempts, used_fallback)。
     """
+    from plugins.utils.plugin_data_registry import reorder_tagged_providers_by_catalog
+
+    tagged = reorder_tagged_providers_by_catalog("a_share_fund_flow", list(tagged))
     ordered = reorder_provider_chain(preference, tagged)
     attempts: List[Dict[str, Any]] = []
     used_fallback = False

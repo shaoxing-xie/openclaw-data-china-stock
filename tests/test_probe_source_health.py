@@ -13,6 +13,13 @@ def test_tool_probe_source_health_dry_run():
             assert row.get("error_code") == "PLUGIN_UNAVAILABLE"
 
 
+def test_tool_probe_include_catalog_digest():
+    out = tool_probe_source_health(write_snapshot=False, include_catalog_digest=True)
+    assert out.get("success") is True
+    assert isinstance(out.get("catalog_digest"), dict)
+    assert "global_index_spot" in out["catalog_digest"].get("source_chains") or {}
+
+
 def test_tool_probe_source_health_writes_snapshot(tmp_path, monkeypatch):
     import plugins.utils.source_health as sh
 

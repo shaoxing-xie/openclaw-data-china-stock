@@ -9,6 +9,19 @@
 
 ---
 
+## 0. 宿主工程（etf-options-ai-assistant）与可观测
+
+本目录在常见部署中通过 **符号链接** 挂载到宿主仓库的 `plugins/data_collection`；宿主还会用 `plugins/china_stock_upstream.py` **临时注入**本仓库根路径以加载 `plugins/analysis/*` 等模块。集成硬约束、验收清单与「禁止在宿主 `plugins/utils/` 下新增会遮蔽 `plugins.utils` 的薄封装」等说明，以宿主文档为真源：克隆 **etf-options-ai-assistant** 后阅读其 `docs/integration/plugin_assistant_integration_plan.md`（与本节互为索引）。
+
+**与本目录直接相关的可观测字段（节选）**：
+
+| 工具 / 模块 | 宿主或排障常用字段 |
+|-------------|-------------------|
+| `index/fetch_global.py` → `tool_fetch_global_index_spot` | `source_route`（含 **`catalog_merge`**、**`active_priority`**）、`attempts`、`elapsed_ms`、`quality` |
+| `plugins/analysis`（L4、选股等） | 以各 `tool_*` 返回体及 `_meta` 为准；宿主 Chart 可能将 L4 落盘至 `data/semantic/l4_*` 再经 HTTP 只读暴露 |
+
+---
+
 ## 1. 架构与调用链（必读）
 
 对外工具名以项目根 [`tool_runner.py`](../../tool_runner.py) 的 `TOOL_MAP` 与 **`ALIASES`** 为准；[`config/tools_manifest.yaml`](../../config/tools_manifest.yaml) 为 Agent 侧参数说明。

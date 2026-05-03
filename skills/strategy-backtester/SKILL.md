@@ -36,8 +36,17 @@ triggers:
 3. 交易统计与参数敏感性
 4. 限制条件与下一步实验
 
+### 证据表（必选）
+
+- 列出 `tool_fetch_market_data`、`tool_calculate_technical_indicators` 等调用与 `quality_status`；收益/回撤等须来自工具或明确声明为 **MVP 派生计算** 并附公式。
+
+### 反证与局限（必选）
+
+- 样本外区间、幸存者偏差、未计入成本/滑点时对结论的影响。
+
 ## 强制规则
 
+- 仅通过 **manifest / `tool_runner`** 调用依赖工具，禁止引导直连 `plugins.data_collection`。
 - 若缺少足够历史数据，输出 `insufficient_evidence`。
 - 若无专用回测工具，必须声明 `MVP mode` 与能力边界。
 - 禁止输出买卖点、仓位比例、杠杆建议。
@@ -45,8 +54,10 @@ triggers:
 
 ## 依赖工具
 
+- `tool_resolve_symbol`（L2；标的解析）
 - `tool_fetch_market_data`
 - `tool_calculate_technical_indicators`
+- `tool_l4_valuation_context`（L4-data；标的含个股时可选并列估值事实字段）
 
 ## 通用输出字段
 

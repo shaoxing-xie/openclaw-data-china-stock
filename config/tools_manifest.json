@@ -1025,6 +1025,114 @@
       }
     },
     {
+      "id": "tool_resolve_symbol",
+      "label": "解析交易代码（L2）",
+      "description": "将任意常见写法归一为 6 位 canonical_code，并给出 entity_type 猜测与 entity_id 占位（idx:/stk:/etf:）。无上游调用。",
+      "description_short": "代码归一与实体类型猜测。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "股票/ETF/指数代码或带 sh/sz 前缀",
+            "default": "600519"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
+      "id": "tool_batch_resolve_symbol",
+      "label": "批量解析交易代码（L2）",
+      "description": "逗号分隔多个 symbol，最多 200 条；返回 items 列表。",
+      "description_short": "批量代码归一。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "symbols": {
+            "type": "string",
+            "description": "如 600519,510300,000300",
+            "default": "600519,510300"
+          }
+        },
+        "required": [
+          "symbols"
+        ]
+      }
+    },
+    {
+      "id": "tool_get_entity_meta",
+      "label": "获取实体元数据（L2 MVP）",
+      "description": "基于 tool_resolve_symbol；v1 不拉上游名称，quality_status=degraded 并附说明，后续接 master_meta。",
+      "description_short": "实体卡片 MVP。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "default": "510300"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
+      "id": "tool_get_index_constituents",
+      "label": "获取指数成份股（L2 统一出口）",
+      "description": "与 tool_fetch_index_constituents 同源实现，经 entity 模块单一出口；参数一致。",
+      "description_short": "指数成分（L2 别名）。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "index_code": {
+            "type": "string",
+            "default": "000300"
+          },
+          "include_weight": {
+            "type": "boolean",
+            "default": false
+          },
+          "provider_preference": {
+            "type": "string",
+            "default": "auto"
+          },
+          "max_rows": {
+            "type": "number",
+            "default": 0
+          }
+        },
+        "required": [
+          "index_code"
+        ]
+      }
+    },
+    {
+      "id": "tool_get_etf_holdings",
+      "label": "获取ETF持仓（占位）",
+      "description": "v1 未实现上游；返回 degraded 与指引。",
+      "description_short": "ETF 持仓占位。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "etf_code": {
+            "type": "string",
+            "default": "510300"
+          },
+          "max_rows": {
+            "type": "number",
+            "default": 50
+          }
+        },
+        "required": [
+          "etf_code"
+        ]
+      }
+    },
+    {
       "id": "tool_fetch_stock_research_news",
       "label": "获取个股新闻与研报",
       "description": "content_kind=news|research|main_feed（主新闻流无需有效 stock_code）。东财结构化为主。provider_preference=auto|eastmoney。",
@@ -1055,6 +1163,92 @@
         "required": [
           "content_kind"
         ]
+      }
+    },
+    {
+      "id": "tool_l4_valuation_context",
+      "label": "L4-data 估值上下文",
+      "description": "确定性估值字段快照（PE/PB/ROE 等），无投资建议；``data_layer=L4_data``。",
+      "description_short": "L4 估值上下文 MVP。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "stock_code": {
+            "type": "string",
+            "description": "6 位或带交易所前缀",
+            "default": "600519"
+          },
+          "trade_date": {
+            "type": "string",
+            "description": "YYYY-MM-DD，可选",
+            "default": ""
+          }
+        },
+        "required": [
+          "stock_code"
+        ]
+      }
+    },
+    {
+      "id": "tool_l4_pe_ttm_percentile",
+      "label": "L4-data PE_TTM 历史分位",
+      "description": "基于东方财富按报告期 PE_TTM 序列，在 window_years 窗口内计算经验分位（0–100）；非投资建议。",
+      "description_short": "L4 PE 分位（报告期样本）。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "stock_code": {
+            "type": "string",
+            "description": "6 位 A 股代码",
+            "default": "600519"
+          },
+          "trade_date": {
+            "type": "string",
+            "description": "YYYY-MM-DD，元数据用",
+            "default": ""
+          },
+          "window_years": {
+            "type": "integer",
+            "description": "回看年数，默认 5，最大 20",
+            "default": 5
+          }
+        },
+        "required": [
+          "stock_code"
+        ]
+      }
+    },
+    {
+      "id": "tool_summarize_attempts",
+      "label": "聚合 attempts 摘要",
+      "description": "输入 JSON 数组字符串（通常来自其他工具输出的 attempts 字段），按 source_id 计数，用于观测。",
+      "description_short": "attempts 只读聚合。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "attempts_json": {
+            "type": "string",
+            "description": "JSON 数组，如 [{\"source_id\":\"akshare\"}]",
+            "default": "[]"
+          },
+          "dataset_id": {
+            "type": "string",
+            "description": "可选；写入摘要 data.dataset_id 便于 dataset×source 观测",
+            "default": ""
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "id": "tool_plugin_catalog_digest",
+      "label": "插件 catalog 只读摘要",
+      "description": "返回 factor_registry 的 schema_version、source_chains 摘要、可筛因子 id、manifest 工具数量；无网络 I/O。",
+      "description_short": "registry + manifest 观测摘要。",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
       }
     },
     {
@@ -1124,6 +1318,35 @@
           "provider_preference": {
             "type": "string",
             "default": "auto"
+          }
+        }
+      }
+    },
+    {
+      "id": "tool_screen_by_factors",
+      "label": "多因子选股（注册表命名别名）",
+      "description": "与 tool_screen_equity_factors 等价；完整参数集相同（filters、neutralize、custom_symbols、lookback_calendar_days 等）。",
+      "description_short": "多因子选股别名。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "universe": {
+            "type": "string",
+            "default": "hs300"
+          },
+          "factors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "top_n": {
+            "type": "number",
+            "default": 10
+          },
+          "regime_hint": {
+            "type": "string",
+            "default": "oscillation"
           }
         }
       }

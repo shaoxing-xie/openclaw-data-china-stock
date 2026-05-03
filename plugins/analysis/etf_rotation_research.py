@@ -58,11 +58,11 @@ def tool_etf_rotation_research(
         "message": "etf_rotation_research ok",
         "quality_status": quality_status,
         "_meta": {
-            "schema_name": "decision_rotation_candidates_v1",
+            "schema_name": "rotation_feature_aggregate_v1",
             "schema_version": "1.0.0",
             "task_id": "etf-rotation-research",
             "run_id": datetime.now().strftime("%Y%m%dT%H%M%S"),
-            "data_layer": "L3",
+            "data_layer": "L3_aggregate",
             "generated_at": datetime.now().isoformat(),
             "trade_date": td,
             "source_tools": [

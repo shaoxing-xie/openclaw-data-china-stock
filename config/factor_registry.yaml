@@ -1,0 +1,54 @@
+# 因子注册表 + 多源链（catalog）。加载器：plugins.utils.plugin_data_registry.load_registry()
+# 优先路径：config/factor_registry.yaml（与实施方案命名一致）；旧路径 plugin_data_registry.yaml 已弃用。
+schema_version: "1.0.0"
+registry_note: "配置优先于代码内隐式顺序；退出条件见 docs/data_model/catalog_runtime_alignment.md、meta_contract.md 与运维文档。"
+
+factors:
+  - factor_id: reversal_5d
+    category: momentum
+    source_tool: tool_screen_equity_factors
+    min_history_days: 6
+    output_unit: "%"
+    providers: [derived]
+  - factor_id: fund_flow_3d
+    category: flow
+    source_tool: tool_screen_equity_factors
+    min_history_days: 4
+    output_unit: "score"
+    providers: [eastmoney, ths]
+  - factor_id: sector_momentum_5d
+    category: sector
+    source_tool: tool_screen_equity_factors
+    min_history_days: 6
+    output_unit: "score"
+    providers: [akshare, sina]
+  - factor_id: pe_ttm
+    category: valuation
+    source_tool: tool_screen_equity_factors
+    implemented: false
+    note: "注册占位；选股引擎接入前勿从 ALLOWED 暴露"
+  - factor_id: pb_mrq
+    category: valuation
+    source_tool: tool_screen_equity_factors
+    implemented: false
+    note: "注册占位"
+
+source_chains:
+  global_index_spot:
+    description: "全球指数现货；与 fetch_global_index_spot 循环源 id 一致（yfinance|fmp|sina）"
+    provider_tags:
+      - yfinance
+      - fmp
+      - sina
+  a_share_fund_flow:
+    description: "A 股主力资金流；与 _run_chain 内 (ths|eastmoney) 标签一致；cache 为占位不参排"
+    provider_tags:
+      - ths
+      - eastmoney
+      - cache
+  technical_indicators:
+    description: "技术指标引擎回退链摘要"
+    provider_tags:
+      - talib
+      - pandas_ta
+      - builtin
