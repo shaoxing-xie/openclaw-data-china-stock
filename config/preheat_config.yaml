@@ -1,0 +1,18 @@
+# 缓存预热：由 scripts/preheat_cache.py 读取；默认关闭，避免未配置 Cron 时误跑。
+# Cron 建议在宿主 etf-options-ai-assistant / OpenClaw jobs.json 中以 bash -lc + set -a source ~/.openclaw/.env 调度。
+preheat:
+  enabled: false
+  targets:
+    - name: fund_flow_sector_rank_smoke
+      tool: tool_fetch_a_share_fund_flow
+      params:
+        query_kind: sector_rank
+        provider_preference: auto
+        limit: 20
+        sector_type: industry
+        rank_window: immediate
+
+  options:
+    parallel: true
+    max_workers: 3
+    timeout_seconds: 120

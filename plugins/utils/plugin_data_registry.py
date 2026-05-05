@@ -6,6 +6,8 @@ Read-only; safe for import-time use. Paths resolved from repo root (parent of co
 
 from __future__ import annotations
 
+import json
+from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, TypeVar
@@ -15,6 +17,7 @@ import yaml
 T = TypeVar("T")
 
 _ROOT = Path(__file__).resolve().parents[2]
+_SOURCE_PRIORITY_PATH = _ROOT / "config" / "source_priority.yaml"
 _REGISTRY_CANDIDATES = (
     _ROOT / "config" / "factor_registry.yaml",
     _ROOT / "config" / "plugin_data_registry.yaml",
@@ -106,6 +109,83 @@ _GLOBAL_SPOT_IDS = frozenset({"yfinance", "fmp", "sina"})
 _CATALOG_NON_ORDER_TAGS = frozenset({"cache", "akshare"})
 
 
+@lru_cache(maxsize=2)
+def _load_source_priority_config() -> Dict[str, Any]:
+    if not _SOURCE_PRIORITY_PATH.is_file():
+        return {"dynamic_priority_enabled": False, "adjustment_mode": "tie_break_only"}
+    raw = yaml.safe_load(_SOURCE_PRIORITY_PATH.read_text(encoding="utf-8")) or {}
+    return raw if isinstance(raw, dict) else {"dynamic_priority_enabled": False}
+
+
+def _rollup_latest_success_rates(provider_ids: frozenset[str]) -> Dict[str, float]:
+    """
+    读取 source_health 的 probe rollup（近 N 日），取各 source 序列最后一日的 success_rate。
+    """
+    from plugins.utils.source_health import rollup_path
+
+    path = rollup_path()
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    series = data.get("series") or {}
+    out: Dict[str, float] = {}
+    for sid in provider_ids:
+        arr = series.get(sid)
+        if isinstance(arr, list) and arr:
+            last = arr[-1]
+            if isinstance(last, dict):
+                sr = last.get("success_rate")
+                if sr is not None:
+                    try:
+                        out[sid] = float(sr)
+                    except (TypeError, ValueError):
+                        pass
+    return out
+
+
+def _append_dynamic_priority_audit(record: Dict[str, Any]) -> None:
+    path = _ROOT / "data" / "meta" / "dynamic_priority_audit.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rec = {"ts": datetime.now(timezone.utc).isoformat(), **record}
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+
+def _apply_dynamic_tie_break_global_spot(
+    merged: List[str], meta: Dict[str, Any]
+) -> Tuple[List[str], Dict[str, Any]]:
+    cfg = _load_source_priority_config()
+    enabled = bool(cfg.get("dynamic_priority_enabled", False))
+    mode = str(cfg.get("adjustment_mode") or "tie_break_only")
+    dp = meta.setdefault("dynamic_priority", {})
+    dp.update({"enabled": enabled, "adjustment_mode": mode})
+    if not enabled or mode != "tie_break_only":
+        return merged, meta
+    scores = _rollup_latest_success_rates(_GLOBAL_SPOT_IDS)
+    before = list(merged)
+    order_idx = {sid: i for i, sid in enumerate(merged)}
+    new_merged = sorted(merged, key=lambda sid: (-scores.get(sid, 0.5), order_idx[sid]))
+    dp["scores_used"] = scores
+    if new_merged != before:
+        dp["applied"] = True
+        dp["before"] = before
+        dp["after"] = list(new_merged)
+        _append_dynamic_priority_audit(
+            {
+                "dataset_id": "global_index_spot",
+                "before": before,
+                "after": list(new_merged),
+                "scores": scores,
+            }
+        )
+        return new_merged, meta
+    dp["applied"] = False
+    return merged, meta
+
+
 def merge_global_index_spot_priority(config_priority: List[str]) -> Tuple[List[str], Dict[str, Any]]:
     """
     Merge ``data_sources.global_index.latest.priority`` with ``source_chains.global_index_spot``.
@@ -127,10 +207,11 @@ def merge_global_index_spot_priority(config_priority: List[str]) -> Tuple[List[s
         priority = ["yfinance", "fmp", "sina"]
     if not catalog:
         meta["merge_mode"] = "config_only_empty_catalog"
-        return list(dict.fromkeys(priority)), meta
+        merged = list(dict.fromkeys(priority))
+        return _apply_dynamic_tie_break_global_spot(merged, meta)
 
     allowed = set(priority)
-    merged: List[str] = []
+    merged = []
     for t in catalog:
         if t in allowed and t not in merged:
             merged.append(t)
@@ -138,7 +219,7 @@ def merge_global_index_spot_priority(config_priority: List[str]) -> Tuple[List[s
         if t not in merged:
             merged.append(t)
     meta["merge_mode"] = "catalog_first_then_config_remainder"
-    return merged, meta
+    return _apply_dynamic_tie_break_global_spot(merged, meta)
 
 
 def reorder_tagged_providers_by_catalog(dataset_key: str, tagged: List[Tuple[str, T]]) -> List[Tuple[str, T]]:

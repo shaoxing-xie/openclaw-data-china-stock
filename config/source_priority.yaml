@@ -1,0 +1,4 @@
+# 动态源优先级（可选）：默认关闭；仅在 registry merge 层对已允许的 provider 做 tie-break。
+# 分数来源：data/meta/source_health_history_rollup.json（probe 成功率序列最后一日的 success_rate）。
+dynamic_priority_enabled: false
+adjustment_mode: tie_break_only

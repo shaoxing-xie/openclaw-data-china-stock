@@ -8,6 +8,7 @@ A 股资金流向统一查询（东财 / 同花顺等多源链）。
 from __future__ import annotations
 
 import concurrent.futures
+import copy
 import json
 import logging
 import math
@@ -59,6 +60,7 @@ from plugins.data_collection.sentiment_common import (
     normalize_contract,
     quality_gate_records,
 )
+from plugins.utils.cache import fund_flow_tool_memory_cache
 
 try:
     from plugins.data_collection.utils import eastmoney_fund_flow_direct as _em_http
@@ -370,6 +372,12 @@ def tool_fetch_a_share_fund_flow(
             "big_deal_stock_code": big_deal_stock_code,
         },
     )
+    mem_hit = fund_flow_tool_memory_cache.get(cache_key)
+    if mem_hit is not None and isinstance(mem_hit, dict) and mem_hit.get("success"):
+        out = copy.copy(mem_hit)
+        out["_cache_hit"] = True
+        out["_memory_cache_hit"] = True
+        return out
     cached = cache_get(cache_key)
     if cached is not None:
         return normalize_contract(
@@ -419,6 +427,7 @@ def tool_fetch_a_share_fund_flow(
     wrapped = _post_process_fund_flow(raw, qk)
     if wrapped.get("success"):
         cache_set(cache_key, wrapped, infer_ttl_seconds("fund_flow"))
+        fund_flow_tool_memory_cache.set(cache_key, wrapped, ttl=60)
     return wrapped
 
 

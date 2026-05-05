@@ -9,7 +9,15 @@
 提供两种缓存类型：
 
 - **内存缓存（LRU）**：基于最近最少使用算法，适合频繁访问的数据
-- **结果缓存（TTL）**：基于时间过期，适合计算结果缓存
+- **结果缓存（TTL）**：基于时间过期，适合计算结果缓存；可选 **`max_entries`**（超出按最旧 `created_at` 淘汰）、**`cache_result(..., copy_on_hit=True)`** 命中时对 dict 浅拷贝并打 `_cache_hit`，避免修改缓存对象
+- **汇总**：`get_detailed_stats()`、`fund_flow_tool_memory_cache`（资金流工具进程内二次缓存，默认 TTL 60s）
+
+### 1b. 熔断（`circuit_breaker.py`）
+
+- 默认关闭；设置 **`OPENCLAW_CIRCUIT_BREAKER_ENABLED=1`** 启用。
+- **`call_or_pass_through(key, fn)`**：OPEN 时返回 `error_code=CIRCUIT_OPEN`、`quality_status=error`，不静默成功。
+- 可选阈值 / 恢复：`OPENCLAW_CB_FAILURE_THRESHOLD`、`OPENCLAW_CB_RECOVERY_SECONDS`。
+- **`throttled_http.run_bounded_maybe_circuit(circuit_key, fn, *args, **kwargs)`**：并发槽位 + 熔断组合。
 
 ### 2. 重试功能 (`retry.py`)
 
@@ -328,6 +336,5 @@ python3 collect_performance_baseline.py
 ## 未来优化
 
 - [ ] 分布式缓存支持（Redis）
-- [ ] 缓存预热机制
 - [ ] 更细粒度的缓存控制
 - [ ] 重试策略优化（基于错误类型）

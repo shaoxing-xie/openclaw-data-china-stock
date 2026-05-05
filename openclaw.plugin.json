@@ -1,8 +1,8 @@
 {
   "id": "openclaw-data-china-stock",
   "name": "OpenClaw Data China Stock",
-  "version": "0.5.11",
-  "description": "A-share / ETF / option market data plugin for OpenClaw with unified market data API, fund-flow and screener tools, multi-factor equity screening (tool_screen_equity_factors), stock views, and technical indicator engine (P0+P1+P2, 58 indicators) powered by TA-Lib/pandas-ta fallback.",
+  "version": "0.5.12",
+  "description": "A-share / ETF / option market data plugin for OpenClaw with unified market data API, fund-flow and screener tools, multi-factor equity screening (tool_screen_equity_factors), stock views, technical indicator engine (P0+P1+P2, 58 indicators) powered by TA-Lib/pandas-ta fallback, TTL cache enhancements, optional preheat/circuit-breaker and governed dynamic source tie-break.",
   "configSchema": {
     "type": "object",
     "additionalProperties": false,

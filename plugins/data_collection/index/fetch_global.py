@@ -13,7 +13,7 @@ import os
 import re
 import urllib.parse
 import time
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Callable, Optional, Dict, Any, List, Tuple
 from datetime import datetime
 
 from plugins.utils.proxy_env import proxy_context_for_source
@@ -602,6 +602,13 @@ def _merge_by_symbol(order: List[str], by_sym: Dict[str, Dict[str, Any]]) -> Lis
     return [by_sym[s] for s in order if s in by_sym]
 
 
+def _with_upstream_circuit(provider: str, fn: Callable[[], Dict[str, Any]]) -> Dict[str, Any]:
+    """上游熔断（默认关 OPENCLAW_CIRCUIT_BREAKER_ENABLED）；OPEN 时返回含 CIRCUIT_OPEN 的 dict。"""
+    from plugins.utils.circuit_breaker import call_or_pass_through
+
+    return call_or_pass_through(f"global_index_spot:{provider}", fn)
+
+
 def fetch_global_index_spot(
     index_codes: Optional[str] = None,
     api_base_url: str = "http://localhost:5000",
@@ -683,7 +690,19 @@ def fetch_global_index_spot(
                 })
                 continue
             t0 = time.perf_counter()
-            res = _fetch_fmp(missing, fmp_keys, root_cfg)
+            res = _with_upstream_circuit("fmp", lambda: _fetch_fmp(missing, fmp_keys, root_cfg))
+            if isinstance(res, dict) and res.get("error_code") == "CIRCUIT_OPEN":
+                attempts.append(
+                    {
+                        "source": "financialmodelingprep.com/stable/quote",
+                        "source_id": "fmp",
+                        "success": False,
+                        "failure_code": "CIRCUIT_OPEN",
+                        "message": str(res.get("error", ""))[:240],
+                        "elapsed_ms": 0,
+                    }
+                )
+                continue
             elapsed_ms = int((time.perf_counter() - t0) * 1000)
             for row in res.get("data") or []:
                 c = row.get("code")
@@ -712,7 +731,19 @@ def fetch_global_index_spot(
                 sources_used.append("financialmodelingprep.com/stable/quote")
         elif src == "yfinance":
             t0 = time.perf_counter()
-            res = _fetch_yfinance(missing, root_cfg)
+            res = _with_upstream_circuit("yfinance", lambda: _fetch_yfinance(missing, root_cfg))
+            if isinstance(res, dict) and res.get("error_code") == "CIRCUIT_OPEN":
+                attempts.append(
+                    {
+                        "source": "yfinance",
+                        "source_id": "yfinance",
+                        "success": False,
+                        "failure_code": "CIRCUIT_OPEN",
+                        "message": str(res.get("error", ""))[:240],
+                        "elapsed_ms": 0,
+                    }
+                )
+                continue
             elapsed_ms = int((time.perf_counter() - t0) * 1000)
             for row in res.get("data") or []:
                 c = row.get("code")
@@ -746,7 +777,19 @@ def fetch_global_index_spot(
             if not codes_sina:
                 codes_sina = ["int_dji", "int_nasdaq", "int_sp500", "int_nikkei", "rt_hkHSI"]
             t0 = time.perf_counter()
-            fallback = _fetch_sina(codes_sina, root_cfg)
+            fallback = _with_upstream_circuit("sina", lambda: _fetch_sina(codes_sina, root_cfg))
+            if isinstance(fallback, dict) and fallback.get("error_code") == "CIRCUIT_OPEN":
+                attempts.append(
+                    {
+                        "source": "hq.sinajs.cn",
+                        "source_id": "sina",
+                        "success": False,
+                        "failure_code": "CIRCUIT_OPEN",
+                        "message": str(fallback.get("error", ""))[:240],
+                        "elapsed_ms": 0,
+                    }
+                )
+                continue
             elapsed_ms = int((time.perf_counter() - t0) * 1000)
             for row in fallback.get("data") or []:
                 c = row.get("code")

@@ -55,3 +55,23 @@ def upstream_slot() -> Iterator[None]:
 def run_bounded(fn: Callable[..., T], *args: Any, **kwargs: Any) -> T:
     with upstream_slot():
         return fn(*args, **kwargs)
+
+
+def run_bounded_maybe_circuit(
+    circuit_key: str | None,
+    fn: Callable[..., T],
+    *args: Any,
+    **kwargs: Any,
+) -> T | Dict[str, Any]:
+    """
+    在上游并发槽位内执行 fn；若给定 circuit_key 且熔断全局启用，
+    OPEN 时返回 circuit_failure_payload（见 circuit_breaker），否则返回 fn 结果。
+    """
+    from plugins.utils.circuit_breaker import call_or_pass_through
+
+    def _invoke() -> Any:
+        return run_bounded(fn, *args, **kwargs)
+
+    if not circuit_key:
+        return _invoke()
+    return call_or_pass_through(str(circuit_key), _invoke)
