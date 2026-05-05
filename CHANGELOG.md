@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-05-05 (v0.5.11)
+
+### ClawHub / 构建
+
+- 满足 ClawHub 对 TypeScript 插件的 **编译产物** 校验：新增 `npm run build`（esbuild 输出 `dist/index.js`），`package.json` 的 `main` / `openclaw.extensions` 指向 `dist/index.js`；`prepack` 自动构建。
+- 入口在 `dist/` 时通过 `PKG_ROOT` 解析 `tool_runner.py` 与 `config/tools_manifest.json`，避免路径错位。
+- `scripts/register_openclaw_dev.py`：支持从助手仓 symlink `ota-*-brief` skills 并写入 etf workspace agent `skills`（`OPENCLAW_ETF_OPTIONS_ASSISTANT_ROOT`）。
+
 ## 2026-05-03 (v0.5.10)
 
 ### ClawHub 发布

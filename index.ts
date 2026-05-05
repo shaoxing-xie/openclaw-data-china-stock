@@ -2,17 +2,19 @@ import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { existsSync, readFileSync } from "fs";
-import { dirname, join } from "path";
+import { basename, dirname, join } from "path";
 import { fileURLToPath } from "url";
 
 const execFileAsync = promisify(execFile);
 
 const HOME = process.env.HOME || "";
 const THIS_DIR = dirname(fileURLToPath(import.meta.url));
+/** 发布包入口在 dist/ 时，资源文件仍在仓库根（tool_runner.py、config/） */
+const PKG_ROOT = basename(THIS_DIR) === "dist" ? dirname(THIS_DIR) : THIS_DIR;
 
 function getDefaultScriptPath(): string {
   // Prefer locating `tool_runner.py` inside the installed plugin package directory.
-  const candidate = join(THIS_DIR, "tool_runner.py");
+  const candidate = join(PKG_ROOT, "tool_runner.py");
   if (existsSync(candidate)) return candidate;
   // Fallback: keep backward compatibility with older installations.
   return HOME ? `${HOME}/openclaw-data-china-stock/tool_runner.py` : "";
@@ -20,7 +22,7 @@ function getDefaultScriptPath(): string {
 
 function getManifestPath(): string {
   const candidates = [
-    join(THIS_DIR, "config", "tools_manifest.json"),
+    join(PKG_ROOT, "config", "tools_manifest.json"),
     join(process.cwd(), "config", "tools_manifest.json"),
   ];
   for (const p of candidates) {
@@ -54,8 +56,8 @@ function resolvePythonBin(): PythonBinSelection {
   }
 
   const localCandidates = [
-    join(THIS_DIR, ".venv", "bin", "python"),
-    join(THIS_DIR, ".venv", "Scripts", "python.exe"),
+    join(PKG_ROOT, ".venv", "bin", "python"),
+    join(PKG_ROOT, ".venv", "Scripts", "python.exe"),
     join(process.cwd(), ".venv", "bin", "python"),
     join(process.cwd(), ".venv", "Scripts", "python.exe"),
   ];
