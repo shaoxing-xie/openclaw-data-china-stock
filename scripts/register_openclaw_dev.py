@@ -22,7 +22,7 @@ REPO_ROOT = Path(
 ).resolve()
 OPENCLAW_JSON = Path.home() / ".openclaw" / "openclaw.json"
 PLUGIN_ID = "openclaw-data-china-stock"
-SKILL_NAMES = [
+PLUGIN_SKILL_NAMES = [
     "china-macro-analyst",
     "technical-analyst",
     "market-scanner",
@@ -31,6 +31,15 @@ SKILL_NAMES = [
     "strategy-backtester",
     "fundamental-analyst",
 ]
+# 交易助手仓 `skills/` 下的 L4-semantic brief（须与 etf-options-ai-assistant 目录名一致）
+ASSISTANT_BRIEF_SKILL_NAMES = [
+    "ota-equity-valuation-brief",
+    "ota-flow-sentiment-brief",
+    "ota-market-regime-brief",
+]
+ASSISTANT_ROOT = Path(
+    os.environ.get("OPENCLAW_ETF_OPTIONS_ASSISTANT_ROOT", "/home/xie/etf-options-ai-assistant")
+).resolve()
 WORKSPACE_SKILLS = Path.home() / ".openclaw" / "workspaces" / "etf-options-ai-assistant" / "skills"
 
 
@@ -54,15 +63,15 @@ def _ensure_plugin_registration(cfg: Dict[str, Any]) -> None:
     entry_cfg["manifestPath"] = str(REPO_ROOT / "config" / "tools_manifest.json")
 
 
-def _ensure_skill_symlink(skill_name: str) -> str:
-    skill_src = REPO_ROOT / "skills" / skill_name
+def _ensure_skill_symlink(skill_name: str, skill_repo_root: Path) -> str:
+    skill_src = skill_repo_root / "skills" / skill_name
     skill_dst = WORKSPACE_SKILLS / skill_name
     if not skill_src.exists():
         raise FileNotFoundError(f"skill source not found: {skill_src}")
 
     WORKSPACE_SKILLS.mkdir(parents=True, exist_ok=True)
     if skill_dst.exists() or skill_dst.is_symlink():
-        if skill_dst.is_symlink() and skill_dst.resolve() == skill_src:
+        if skill_dst.is_symlink() and skill_dst.resolve() == skill_src.resolve():
             return str(skill_dst)
         if skill_dst.is_dir() and not skill_dst.is_symlink():
             return str(skill_dst)
@@ -73,11 +82,12 @@ def _ensure_skill_symlink(skill_name: str) -> str:
 
 def _ensure_agent_skill_binding(cfg: Dict[str, Any]) -> None:
     agents = cfg.get("agents", {}).get("list", [])
+    bind_names = list(PLUGIN_SKILL_NAMES) + list(ASSISTANT_BRIEF_SKILL_NAMES)
     for agent in agents:
         workspace = str(agent.get("workspace", ""))
         if workspace.endswith("/etf-options-ai-assistant"):
             skills: List[str] = agent.setdefault("skills", [])
-            for skill_name in SKILL_NAMES:
+            for skill_name in bind_names:
                 if skill_name not in skills:
                     skills.append(skill_name)
 
@@ -89,7 +99,10 @@ def main() -> int:
     _ensure_plugin_registration(cfg)
     _ensure_agent_skill_binding(cfg)
     OPENCLAW_JSON.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    symlink_paths = [_ensure_skill_symlink(skill_name) for skill_name in SKILL_NAMES]
+    symlink_paths = [_ensure_skill_symlink(skill_name, REPO_ROOT) for skill_name in PLUGIN_SKILL_NAMES]
+    symlink_paths += [
+        _ensure_skill_symlink(skill_name, ASSISTANT_ROOT) for skill_name in ASSISTANT_BRIEF_SKILL_NAMES
+    ]
 
     print(
         json.dumps(
