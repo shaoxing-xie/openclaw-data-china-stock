@@ -17,3 +17,6 @@ efinance
 pandas-ta>=0.3.14b
 TA-Lib>=0.4.28
 
+# Optional: DuckDB for faster cache queries (improves performance for large historical datasets)
+duckdb>=1.1.0
+
